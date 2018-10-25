@@ -1,15 +1,16 @@
 
 ## 1 公私钥和地址
 账户是基于公私钥创建的，地址是公钥转换而来。
-###旧地址转换为新地址：
+#### 旧地址转换为新地址：
 ```javascript
 String oldAddress = "AVBokCnLS9NxUjeXTdL8BMsgN41bwtK89J";     //A开头的旧地址
 String newAddress = ConvertAddress.convertAddress(oldAddress);//Z开头的新地址
 ```
-###1.1 公私钥存储
+### 1.1 公私钥存储
 公私钥存储可以存储在数据库中，也可以根据钱包规范存储在文件中。
 
-###1.1.1 自己存储：
+#### 1.1.1 自己存储： 
+
 自己存储，是指账户信息保存在用户数据库或其他地方，而不存储在遵循钱包规范的文件中。
 ####随机创建账号：
 ```javascript
