@@ -13,7 +13,15 @@
         * [随机创建账号](#随机创建账号)
         * [根据私钥创建账号](#根据私钥创建账号)
     * [使用钱包管理](#使用钱包管理)
-* [创建地址](#创建地址)
+    * [创建地址](#创建地址)
+* [数字身份管理](#数字身份管理)
+    * [1. 注册身份](#1-注册身份)
+    	* [创建数字身份](#创建数字身份)
+    	* [向链上注册身份](#向链上注册身份)
+    * [2. 身份管理](#2-身份管理)
+        * [移除身份](#移除身份)
+        * [设置默认身份](#设置默认身份)
+    * [3. 查询链上身份信息](#3-查询链上身份信息)
 * [ZPT和Gala转账](#zpt和gala转账)
     * [1. 初始化](#1-初始化)
     * [2. 查询](#2-查询)
@@ -111,6 +119,44 @@ Address recvAddr = Address.addressFromMultiPubKeys(2, acct1.serializePublicKey()
 | 方法名                  | 参数                      | 参数描述                       |
 | :---------------------- | :------------------------ | :----------------------------- |
 | addressFromMultiPubkeys | int m,byte\[\]... pubkeys | 最小验签个数(<=公钥个数)，公钥 |
+
+
+
+## 数字身份管理
+
+#### 1. 注册身份
+##### 创建数字身份
+```java
+Identity identity = zptSdk.getWalletMgr().createIdentity("passwordtest");
+//创建的账号或身份只在内存中，如果要写入钱包文件，需调用写入接口
+zptSdk.getWalletMgr().writeWallet();
+```
+##### 向链上注册身份
+###### 只有向区块链链成功注册身份之后，该身份才可以真正使用。
+```java
+Identity identity = zptSdk.getWalletMgr().createIdentity("passwordtest");
+zptSdk.nativevm().GId().sendRegister(identity, "passwordtest", acct0, 20000, 1);
+```
+#### 2. 身份管理
+##### 移除身份
+```java
+zptSdk.getWalletMgr().getWallet().removeIdentity("GID:ZPT:ZDtCV5yAeJzV3L6NF2pdaJCB837W9YQFyz"); //输入gid
+zptSdk.getWalletMgr().writeWallet();
+```
+##### 设置默认身份
+```java
+zptSdk.getWalletMgr().getWallet().setDefaultIdentity(1);   //通过index设置默认identity
+zptSdk.getWalletMgr().writeWallet();
+```
+```java
+zptSdk.getWalletMgr().getWallet().setDefaultIdentity("GID:ZPT:ZNuWYd5r8g6ZhrBeEctc1P1Q8hAiZwq1LA"); //通过gid设置默认identity
+zptSdk.getWalletMgr().writeWallet();
+```
+#### 3. 查询链上身份信息
+```java
+String ddo = zptSdk.nativevm().GId().sendGetDDO("GID:ZPT:ZaD1yigDDYNoFPPDt3ogWSUo9YnT7Gxqky"); //输入gid
+```
+
 
 
 
@@ -314,7 +360,7 @@ response:
 
 #### 3. zeepin转账
 ZPT和Gala转账可以一对一，也可以一对多，多对多，多对一。
-##### 构造单笔转账交易并发送（一对一）
+##### 构造转账交易并发送
 
 ```
 转出方与收款方地址：
@@ -458,9 +504,3 @@ zptSdk.nativevm().zpt().sendTransferFrom(acct0, acct0.getAddressU160().toBase58(
 
 
 ```
-
-
-
-
-
-
