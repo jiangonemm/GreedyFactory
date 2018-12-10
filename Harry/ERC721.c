@@ -78,10 +78,17 @@ void ZPT_Storage_Delete(char *key);
 char *ZPT_Transaction_GetHash(char *data);
 int ZPT_Transaction_GetType(char *data);
 char *ZPT_Transaction_GetAttributes(char *data);
-int add(int a, int b)
-{
-    return a + b;
-}
+
+#define true "1";
+#define false "0";
+
+int init_amount = 0;
+
+void Transference(char *from, char *to, char *TokenID);
+void Approval(char *from, char *to, char *TokenID);
+
+void PutRecord(char *key, char *value);
+void GetRecord(char *key);
 
 char *concat(char *a, char *b)
 {
@@ -100,42 +107,13 @@ char *concat(char *a, char *b)
     return res;
 }
 
-int sumArray(int *a, int *b)
-{
-
-    int res = 0;
-    int lena = arrayLen(a);
-    int lenb = arrayLen(b);
-
-    for (int i = 0; i < lena; i++)
-    {
-        res += a[i];
-    }
-    for (int j = 0; j < lenb; j++)
-    {
-        res += b[j];
-    }
-    return res;
-}
-
-#define true 1;
-#define false 0;
-
-long long init_amount = 0;
-
-void Transference(char *from, char *to, char *TokenID);
-void Approval(char *from, char *to, char *TokenID);
-
-void PutRecord(char *key, char *value);
-void GetRecord(char *key);
-
 _Bool Init()
 {
-    ZPT_Storage_Put("totalSupply", I64toa(init_amount, 10));
+    ZPT_Storage_Put("totalSupply", Itoa(init_amount));
     return true;
 }
 
-long long TotalSupply()
+int TotalSupply()
 {
     return ZPT_Storage_Get("totalSupply");
 }
@@ -145,15 +123,15 @@ char *OwnerOf(char *TokenID)
     return ZPT_Storage_Get(TokenID);
 }
 
-_Bool Owns(char *address, char *TokenID)
+char *Owns(char *TokenID, char *address)
 {
     return ByteArrayCompare(ZPT_Storage_Get(TokenID), address);
 }
 
-long long BalanceOf(char *address)
+int BalanceOf(char *address)
 {
-    if (ZPT_Storage_Get(address) == 0)
-        return 0;
+    if (Atoi(ZPT_Storage_Get(address)) == 0)
+        return Itoa(0);
     else
         return ZPT_Storage_Get(address);
 }
@@ -163,34 +141,34 @@ void IncreaseIndex(char *totalSupply, char *TokenID)
     ZPT_Storage_Put(totalSupply, TokenID);
 }
 
-long long IncreaseTotalSupply()
+int IncreaseTotalSupply()
 {
-    long long totalSupply = Atoi64(ZPT_Storage_Get("totalSupply"));
+    int totalSupply = Atoi(ZPT_Storage_Get("totalSupply"));
     totalSupply = totalSupply + 1;
-    ZPT_Storage_Put("totalSupply", I64toa(totalSupply, 10));
-    return I64toa(totalSupply, 10);
+    ZPT_Storage_Put("totalSupply", Itoa(totalSupply));
+    return Itoa(totalSupply);
 }
 
 void Transfer(char *from, char *to, char *TokenID)
 {
     ZPT_Storage_Put(TokenID, to);
-    long long amount = Atoi64(ZPT_Storage_Get(to));
+    int amount = Atoi(ZPT_Storage_Get(to));
     if (amount == 0)
     {
         amount = 0;
     }
     amount = amount + 1;
-    ZPT_Storage_Put(to, I64toa(amount, 10));
-    if (from != 0)
+    ZPT_Storage_Put(to, Itoa(amount));
+    if (from != "")
     {
-        long long fromAmount = Atoi64(ZPT_Storage_Get(from));
+        int fromAmount = Atoi(ZPT_Storage_Get(from));
         fromAmount = fromAmount - 1;
         if (fromAmount == 0)
         {
             ZPT_Storage_Delete(from);
         }
         else
-            ZPT_Storage_Put(from, I64toa(fromAmount, 10));
+            ZPT_Storage_Put(from, Itoa(fromAmount));
 
         char *ap = "ap";
         char *newTokenID = concat(ap, TokenID);
@@ -205,66 +183,65 @@ void ApproveInternal(char *to, char *TokenID)
     ZPT_Storage_Put(newTokenID, to);
 }
 
-_Bool ApprovedFor(char *address, char *TokenID)
+char *ApprovedFor(char *address, char *TokenID)
 {
     char *ap = "ap";
     char *newTokenID = concat(ap, TokenID);
     return ByteArrayCompare(ZPT_Storage_Get(newTokenID), address);
 }
 
-_Bool Approve(char *from, char *to, char *TokenID)
+char *Approve(char *from, char *to, char *TokenID)
 {
     if (to == "")
         return false;
-    if (!Owns(TokenID, from))
+    if (Atoi(Owns(TokenID, from)) == 0)
         return false;
     if (ZPT_Runtime_CheckWitness(from))
         return false;
     ApproveInternal(to, TokenID);
-    ApprovalEvent("Approval", from, to, TokenID);
     ZPT_Runtime_Notify("Approval");
     return true;
 }
 
-_Bool TransferFromOwner(char *owner, char *to, char *TokenID)
+char *TransferFromOwner(char *owner, char *to, char *TokenID)
 {
     if (to == "")
         return false;
-    if (!Owns(owner, TokenID))
+    if (Atoi(Owns(TokenID, owner)) == 0)
         return false;
     if (ZPT_Runtime_CheckWitness(owner))
         return false;
     Transfer(owner, to, TokenID);
-    TransferEvent("Transfer", owner, to, TokenID);
     ZPT_Runtime_Notify("Transfer");
     return true;
 }
 
-_Bool TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
+char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
 {
     if (to == "")
         return false;
-    if (!ApprovedFor(approval, TokenID))
+    if (Atoi(ApprovedFor(approval, TokenID)) == 0)
         return false;
-    if (!Owns(from, TokenID))
+    if (Atoi(Owns(TokenID, from)) == 0)
         return false;
     if (ZPT_Runtime_CheckWitness(approval))
         return false;
     Transfer(from, to, TokenID);
-    TransferEvent("Transfer", from, to, TokenID);
+    ;
     ZPT_Runtime_Notify("Transfer");
     return true;
 }
 
-char *GetHashLish(char *address)
+char *GetHashList(char *address)
 {
-    long long totalSupply = Atoi64(ZPT_Storage_Get("totalSupply"));
+    int totalSupply = Atoi(ZPT_Storage_Get("totalSupply"));
     char *ForTrim = {"////"};
-    char *Result;
-    for (long long i = 1; i <= totalSupply; i = i + 1)
+    char *Hash = {""};
+    char *Result = {""};
+    for (int i = 1; i <= totalSupply; i = i + 1)
     {
-        char *Hash = ZPT_Storage_Get(I64toa(i, 10));
-        if (ByteArrayCompare(ZPT_Storage_Get(Hash), address))
+        Hash = ZPT_Storage_Get(Itoa(i));
+        if (Atoi(ByteArrayCompare(ZPT_Storage_Get(Hash), address)) == 1)
         {
             Result = concat(Result, Hash);
             Result = concat(Result, ForTrim);
@@ -273,12 +250,11 @@ char *GetHashLish(char *address)
     return Result;
 }
 
-_Bool PutRental(char *hash, char *address)
+char *PutRental(char *hash, char *address)
 {
     char *rt = "rt";
     char *newHash = concat(rt, hash);
     ZPT_Storage_Put(newHash, address);
-    PutEvent("Put", hash, address);
     ZPT_Runtime_Notify("Put");
     return true;
 }
@@ -287,7 +263,6 @@ char *GetRental(char *hash)
 {
     char *rt = "rt";
     char *newHash = concat(rt, hash);
-    GetEvent("Get", hash);
     ZPT_Runtime_Notify("Get");
     return ZPT_Storage_Get(newHash);
 }
@@ -310,7 +285,6 @@ int ByteArrayCompare(char *a1, char *a2)
 
 char *invoke(char *method, char *args)
 {
-
     if (strcmp(method, "init") == 0)
     {
         Init();
@@ -328,22 +302,12 @@ char *invoke(char *method, char *args)
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
         char *result = ZPT_Storage_Get(p->TokenID);
-        if (arrayLen(result) != 0)
+        if (Atoi(arrayLen(result)) != 0)
             return false;
         Transfer("", p->address, p->TokenID);
-        long long totalSupply = Atoi64(IncreaseTotalSupply());
-        IncreaseIndex(I64toa(totalSupply, 10), p->TokenID);
+        int totalSupply = Atoi(IncreaseTotalSupply());
+        IncreaseIndex(Itoa(totalSupply), p->TokenID);
         return true;
-
-        // if(arrayLen(args) != 2) return false;
-        // char *TokenID = args[0];
-        // char *address = args[1];
-        // char *result = ZPT_Storage_Get("TokenID");
-        // if(arrayLen(result) != 0) return false;
-        // Tranfer( "", address, TokenID);
-        // long long totalSupply = IncreaseTotalSupply();
-        // IncreaseIndex(totalSupply, TokenID);
-        // return true;
     }
 
     if (strcmp(method, "totalSupply") == 0)
@@ -354,9 +318,6 @@ char *invoke(char *method, char *args)
     if (strcmp(method, "ownerOf") == 0)
     {
 
-        // if(arrayLen(args) != 1) return false;
-        // char *TokenID = args[0];
-        // return OwnerOf(TokenID);
         struct Params
         {
             char *TokenID;
@@ -369,10 +330,6 @@ char *invoke(char *method, char *args)
     if (strcmp(method, "owns") == 0)
     {
 
-        // if(arrayLen(args) != 2) return false;
-        // char *TokenID = args[0];
-        // char *address = args[1];
-        // return Owns(address, TokenID);
         struct Params
         {
             char *TokenID;
@@ -380,9 +337,7 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = Owns(p->address, p->TokenID);
-        ZPT_Runtime_Notify(result);
-        return result;
+        return Owns(p->TokenID, p->address);
     }
 
     if (strcmp(method, "balanceOf") == 0)
@@ -475,50 +430,5 @@ char *invoke(char *method, char *args)
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
         return GetRental(p->hash);
-    }
-
-    if (strcmp(method, "addStorage") == 0)
-    {
-
-        struct Params
-        {
-            char *a;
-            char *b;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        ZPT_Storage_Put(p->a, p->b);
-        char *result = ZPT_JsonMashalResult("Done", "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
-
-    if (strcmp(method, "getStorage") == 0)
-    {
-        struct Params
-        {
-            char *a;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *value = ZPT_Storage_Get(p->a);
-        char *result = ZPT_JsonMashalResult(value, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
-
-    if (strcmp(method, "deleteStorage") == 0)
-    {
-
-        struct Params
-        {
-            char *a;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        ZPT_Storage_Delete(p->a);
-        char *result = ZPT_JsonMashalResult("Done", "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
     }
 }
