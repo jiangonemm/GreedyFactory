@@ -84,12 +84,6 @@ char *ZPT_Transaction_GetAttributes(char *data);
 
 int init_amount = 0;
 
-void Transference(char *from, char *to, char *TokenID);
-void Approval(char *from, char *to, char *TokenID);
-
-void PutRecord(char *key, char *value);
-void GetRecord(char *key);
-
 char *concat(char *a, char *b)
 {
     int lena = arrayLen(a);
@@ -105,6 +99,22 @@ char *concat(char *a, char *b)
         res[lena + j] = b[j];
     }
     return res;
+}
+
+char *ByteArrayCompare(char *a1, char *a2)
+{
+    if (arrayLen(a1) != arrayLen(a2))
+    {
+        return false;
+    }
+    for (int i = 0; i < arrayLen(a1); i++)
+    {
+        if (a1[i] != a2[i])
+        {
+            return false;
+        }
+    }
+    return true;
 }
 
 char *Init()
@@ -179,7 +189,7 @@ void Transfer(char *from, char *to, char *TokenID)
         else
             ZPT_Storage_Put(from, Itoa(fromAmount));
 
-        char *ap = "ap";
+        char *ap = "ap.";
         char *newTokenID = concat(ap, TokenID);
         ZPT_Storage_Delete(newTokenID);
     }
@@ -187,14 +197,14 @@ void Transfer(char *from, char *to, char *TokenID)
 
 void ApproveInternal(char *to, char *TokenID)
 {
-    char *ap = "ap";
+    char *ap = "ap.";
     char *newTokenID = concat(ap, TokenID);
     ZPT_Storage_Put(newTokenID, to);
 }
 
 char *ApprovedFor(char *address, char *TokenID)
 {
-    char *ap = "ap";
+    char *ap = "ap.";
     char *newTokenID = concat(ap, TokenID);
     return ByteArrayCompare(ZPT_Storage_Get(newTokenID), address);
 }
@@ -208,7 +218,6 @@ char *Approve(char *from, char *to, char *TokenID)
     if (ZPT_Runtime_CheckWitness(from))
         return false;
     ApproveInternal(to, TokenID);
-    ZPT_Runtime_Notify("Approval");
     return true;
 }
 
@@ -221,7 +230,6 @@ char *TransferFromOwner(char *owner, char *to, char *TokenID)
     if (ZPT_Runtime_CheckWitness(owner))
         return false;
     Transfer(owner, to, TokenID);
-    ZPT_Runtime_Notify("Transfer");
     return true;
 }
 
@@ -236,7 +244,6 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
     if (ZPT_Runtime_CheckWitness(approval))
         return false;
     Transfer(from, to, TokenID);
-    ZPT_Runtime_Notify("Transfer");
     return true;
 }
 
@@ -258,42 +265,29 @@ char *GetHashList(char *address)
     return Result;
 }
 
-char *PutRental(char *hash, char *address)
+char *PutRental(char *TokenID, char *address)
 {
-    char *rt = "rt";
-    char *newHash = concat(rt, hash);
+    char *rt = "rt.";
+    char *newHash = concat(rt, TokenID);
     ZPT_Storage_Put(newHash, address);
     return true;
 }
 
-char *GetRental(char *hash)
+char *GetRental(char *TokenID)
 {
-    char *rt = "rt";
-    char *newHash = concat(rt, hash);
+    char *rt = "rt.";
+    char *newHash = concat(rt, TokenID);
     return ZPT_Storage_Get(newHash);
 }
 
-int ByteArrayCompare(char *a1, char *a2)
-{
-    if (arrayLen(a1) != arrayLen(a2))
-    {
-        return false;
-    }
-    for (int i = 0; i < arrayLen(a1); i++)
-    {
-        if (a1[i] != a2[i])
-        {
-            return false;
-        }
-    }
-    return true;
-}
+
 
 char *invoke(char *method, char *args)
 {
     if (strcmp(method, "init") == 0)
     {
-        char *result = Init();
+        char *value = Init();
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -310,20 +304,24 @@ char *invoke(char *method, char *args)
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
         if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
         {
-            return "You need init!";
+            return "You need `init!";
         }
-        char *result = ZPT_Storage_Get(p->TokenID);
-        if (arrayLen(result) != 0)
+        char *Result = ZPT_Storage_Get(p->TokenID);
+        if (arrayLen(Result) != 0)
             return "Your TokenID is existed";
         Transfer("", p->address, p->TokenID);
         int totalSupply = Atoi(IncreaseTotalSupply());
         IncreaseIndex(Itoa(totalSupply), p->TokenID);
-        return "create success";
+        char *value = "create success";
+        char * result = ZPT_JsonMashalResult(value,"string",1);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
 
     if (strcmp(method, "totalSupply") == 0)
     {
-        char *result = TotalSupply();
+        char *value = TotalSupply();
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -337,7 +335,8 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = OwnerOf(p->TokenID);
+        char *value = OwnerOf(p->TokenID);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -352,7 +351,8 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = Owns(p->TokenID, p->address);
+        char *value = Owns(p->TokenID, p->address);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -366,7 +366,8 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = BalanceOf(p->address);
+        char *value = BalanceOf(p->address);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -382,7 +383,8 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = Approve(p->from, p->to, p->TokenID);
+        char *value = Approve(p->from, p->to, p->TokenID);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -398,7 +400,8 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = TransferFromOwner(p->from, p->to, p->TokenID);
+        char *value = TransferFromOwner(p->from, p->to, p->TokenID);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -415,7 +418,8 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = TransferFromApproval(p->from, p->to, p->approval, p->TokenID);
+        char *value = TransferFromApproval(p->from, p->to, p->approval, p->TokenID);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -429,7 +433,8 @@ char *invoke(char *method, char *args)
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = GetHashList(p->address);
+        char *value = GetHashList(p->address);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -439,12 +444,13 @@ char *invoke(char *method, char *args)
 
         struct Params
         {
-            char *hash;
+            char *TokenID;
             char *address;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = PutRental(p->hash, p->address);
+        char *value = PutRental(p->TokenID, p->address);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
@@ -454,11 +460,12 @@ char *invoke(char *method, char *args)
 
         struct Params
         {
-            char *hash;
+            char *TokenID;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *result = GetRental(p->hash);
+        char *value = GetRental(p->TokenID);
+        char * result = ZPT_JsonMashalResult(value,"string",1);
         ZPT_Runtime_Notify(result);
         return result;
     }
