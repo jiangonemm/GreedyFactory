@@ -227,7 +227,6 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
     if (ZPT_Runtime_CheckWitness(approval))
         return false;
     Transfer(from, to, TokenID);
-    ;
     ZPT_Runtime_Notify("Transfer");
     return true;
 }
