@@ -80,8 +80,6 @@ char * ZPT_Transaction_GetHash(char * data);
 int ZPT_Transaction_GetType(char * data);
 char * ZPT_Transaction_GetAttributes(char * data);
 
-
-
 char * concat(char * a, char * b){
     int lena = arrayLen(a);
     int lenb = arrayLen(b);
@@ -89,169 +87,355 @@ char * concat(char * a, char * b){
     for (int i = 0 ;i < lena ;i++){
         res[i] = a[i];
     }
-    
     for (int j = 0; j < lenb ;j++){
         res[lena + j] = b[j];
     }
     return res;
 }
 
-char * Transfer(char * fromAddr, char * toAddr, char * amountChar){
-    int amount = Atoi(amountChar);
-    if (amount <= 0)
-        return "Transfer amount cannot be less than or equal to 0.";
-    int balance_from = Atoi(ZPT_Storage_Get(fromAddr));
-    if (balance_from < amount)
-        return "No sufficient balance.";
-    balance_from = balance_from - amount;
-    int balance_to = Atoi(ZPT_Storage_Get(toAddr)) + amount;
-    ZPT_Storage_Put(fromAddr,Itoa(balance_from));
-    ZPT_Storage_Put(toAddr,Itoa(balance_to));
-    return "Transfer success! You can check new balance by the method \"balanceOf\".";
+//contract administration
+char * ceoAddress = "ZEuzshrCsE1cnvPuuRrDYgnVYNDtyt5d3X";
+int paused = 0;
+
+char * Pause(char * address){
+    if (strcmp(address, ceoAddress)==0){
+        paused = 1;
+        ZPT_Storage_Put("paused", Itoa(paused));
+        return "The cantract is paused successfully.";
+    }
+    return "You have no permission to pause the contract.";
 }
 
-char * TransferFrom(char *fromAddr, char *spenderAddr, char *toAddr, char *amountChar){
+char * UnPause(char * address){
+    if (strcmp(address, ceoAddress)==0){
+        paused = 0;
+        ZPT_Storage_Put("paused", Itoa(paused));
+        return "The cantract is unpaused successfully.";
+    }
+    return "You have no permission to unpause the contract.";
+}
+
+//Check if an account is in the database
+int IsStored(char * key){
+    if (arrayLen(ZPT_Storage_Get(key)) == 0)
+        return 0;
+    return 1;
+}
+
+//Check if an account is appreved by another one
+int IsApproved(char * owner, char * spender){
+    char * allowedKey = concat(owner, spender);
+    if (arrayLen(ZPT_Storage_Get(allowedKey)) == 0)
+        return 0;
+    return 1;
+}
+
+//Initialize the contract, includes the totalSupply value.
+char * Init(char * totalSupply){
+    if (arrayLen(ZPT_Storage_Get("totalSupply")) != 0)
+        return "Already initialized.";
+    if (Atoi(totalSupply) <= 0)
+        return "The totalsupply can not be less than or equal to 0.";
+    ZPT_Storage_Put("totalSupply", totalSupply);
+    return "Init success!";
+}
+
+char * TotalSupply(){
+    char * totalSupply = ZPT_Storage_Get("totalSupply");
+    if (arrayLen(totalSupply) == 0)
+        return "Please init first.";
+    return totalSupply;
+}
+
+char * IncreaseTotal(char * address, char * valueChar){
+    if (Atoi(ZPT_Storage_Get("paused")) == 1)
+        return "The contract has been paused.";
+    if (strcmp(address, ceoAddress) != 0)
+        return "You have no permission to increase the totalSupply.";
+    char * totalSupply = ZPT_Storage_Get("totalSupply");
+    if (arrayLen(totalSupply) == 0)
+        return "Please init first.";
+    int value = Atoi(valueChar);
+    if (value <= 0)
+        return "The value increased can not be less than or equal to 0.";
+    int totalSupplyNew = Atoi(totalSupply) + value;
+    ZPT_Storage_Put("totalSupply", Itoa(totalSupplyNew));
+    return "Increase success.";
+}
+
+char * DecreaseTotal(char * address, char * valueChar){
+    if (Atoi(ZPT_Storage_Get("paused")) == 1)
+        return "The contract has been paused.";
+    if (strcmp(address, ceoAddress) != 0)
+        return "You have no permission to increase the totalSupply.";
+    char * totalSupply = ZPT_Storage_Get("totalSupply");
+    if (arrayLen(totalSupply) == 0)
+        return "Please init first.";
+    int value = Atoi(valueChar);
+    if (value <= 0)
+        return "The value decreased can not be less than or equal to 0.";
+    int totalSupplyNew = Atoi(totalSupply);
+    if (totalSupplyNew <= value)
+        return "The value decreased must be less than the current totalSupply.";
+    totalSupplyNew -= value;
+    ZPT_Storage_Put("totalSupply", Itoa(totalSupplyNew));
+    return "Decrease success.";
+}
+
+char * BalanceOf(char * address){
+    char * balance = ZPT_Storage_Get(address);
+    if (arrayLen(balance) == 0)
+        return "Address is not in our database.";
+    return balance;
+}
+
+char * Transfer(char * fromAddr, char * toAddr, char * amountChar){
+    if (Atoi(ZPT_Storage_Get("paused")) == 1)
+        return "The contract has been paused.";
+    if (ZPT_Runtime_CheckWitness(fromAddr) == 0)
+        return "Inconsistent address.";
+    if (IsStored(fromAddr) == 0)
+        return "Sender address is not in our database.";
     int amount = Atoi(amountChar);
     if (amount <= 0)
         return "Transfer amount cannot be less than or equal to 0.";
-    int balance_from = Atoi(ZPT_Storage_Get(fromAddr));
+    int balance_from = Atoi(BalanceOf(fromAddr));
+    if (balance_from < amount)
+        return "No sufficient balance.";
+    
+    balance_from -= amount;
+    if (balance_from == 0)
+        ZPT_Storage_Delete(fromAddr);
+    else
+        ZPT_Storage_Put(fromAddr,Itoa(balance_from));
+    
+    if (IsStored(toAddr) == 0)
+        ZPT_Storage_Put(toAddr, amountChar);
+    else {
+        int balance_to = Atoi(BalanceOf(toAddr));
+        balance_to += amount;
+        ZPT_Storage_Put(toAddr,Itoa(balance_to));
+    }
+    return "Transfer success!";
+}
+
+
+char * TransferFrom(char *fromAddr, char *spenderAddr, char *toAddr, char *amountChar){
+    if (Atoi(ZPT_Storage_Get("paused")) == 1)
+        return "The contract has been paused.";
+    if (ZPT_Runtime_CheckWitness(spenderAddr) == 0)
+        return "Inconsistent address.";
+    if (IsStored(fromAddr) == 0)
+        return "Sender address is not in our database.";
+    if (IsApproved(fromAddr, spenderAddr) == 0)
+        return "Not approved.";
+    int amount = Atoi(amountChar);
+    if (amount <= 0)
+        return "TransferFrom amount cannot be less than or equal to 0.";
+    int balance_from = Atoi(BalanceOf(fromAddr));
     if (balance_from < amount)
         return "No sufficient balance.";
     char * allowedKey = concat(fromAddr, spenderAddr);
     int allowed = Atoi(ZPT_Storage_Get(allowedKey));
     if (allowed < amount)
         return "No sufficient allowance.";
-    balance_from = balance_from - amount;
-    int balance_to = Atoi(ZPT_Storage_Get(toAddr)) + amount;
-    ZPT_Storage_Put(fromAddr,Itoa(balance_from));
-    ZPT_Storage_Put(toAddr,Itoa(balance_to));
-    allowed = allowed - amount;
+    
+    balance_from -= amount;
+    if (balance_from == 0) {
+        ZPT_Storage_Delete(fromAddr);
+        ZPT_Storage_Delete(allowedKey);
+    }
+    else
+        ZPT_Storage_Put(fromAddr,Itoa(balance_from));
+    
+    if (IsStored(toAddr) == 0)
+        ZPT_Storage_Put(toAddr, amountChar);
+    else {
+        int balance_to = Atoi(BalanceOf(toAddr));
+        balance_to += amount;
+        ZPT_Storage_Put(toAddr,Itoa(balance_to));
+    }
+    
+    allowed -= amount;
+    if (allowed == 0)
+        ZPT_Storage_Delete(allowedKey);
+    else
+        ZPT_Storage_Put(allowedKey, Itoa(allowed));
+    return "TransferFrom success!";
+}
+
+
+char * Approve(char * ownerAddr, char * spenderAddr, char * allowedChar){
+    if (Atoi(ZPT_Storage_Get("paused")) == 1)
+        return "The contract has been paused.";
+    if (ZPT_Runtime_CheckWitness(ownerAddr) == 0)
+        return "Inconsistent address.";
+    if (IsStored(ownerAddr) == 0)
+        return "Owner address is not in our database.";
+    int allowed = Atoi(allowedChar);
+    if (allowed <= 0)
+        return "The allowance can not be less than or equal to 0.";
+    int balance_owner = Atoi(BalanceOf(ownerAddr));
+    if (balance_owner < allowed)
+        return "The allowance can not be larger than the balance of owner.";
+    char * allowedKey = concat(ownerAddr, spenderAddr);
     ZPT_Storage_Put(allowedKey, Itoa(allowed));
-    return "TransferFrom success! You can check new balance by the method \"balanceOf\".";
+    return "Approve success!";
+}
+
+char * Allowance(char * ownerAddr, char * spenderAddr){
+    if (IsStored(ownerAddr) == 0)
+        return "Owner address is not in our database.";
+    if (IsApproved(ownerAddr, spenderAddr) == 0)
+        return "Not approved yet.";
+    char * allowedKey = concat(ownerAddr, spenderAddr);
+    return ZPT_Storage_Get(allowedKey);
 }
 
 char * invoke(char * method,char * args){
     
-    if (strcmp(method ,"init")==0 ){
-        if (arrayLen(ZPT_Storage_Get("totalSupply")) != 0);
-        return "Already initialized.";
+    char * result;
+    
+    if (strcmp(method ,"pause")==0){
         struct Params{
-            char * _totalSupply;
+            char * address;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        ZPT_Storage_Put("totalSupply",p->_totalSupply);
-        return "Init success!";
+        result = Pause(p->address);
+        ZPT_Runtime_Notify(result);
+        return result;
+    }
+    
+    if (strcmp(method ,"unpause")==0){
+        struct Params{
+            char * address;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
+        result = UnPause(p->address);
+        ZPT_Runtime_Notify(result);
+        return result;
+    }
+    
+    if (strcmp(method ,"init")==0){
+        struct Params{
+            char * totalSupply;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
+        result = Init(p->totalSupply);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
     
     if (strcmp(method, "totalSupply")==0){
-        char * totalSupply = ZPT_Storage_Get("totalSupply");
-        if (arrayLen(totalSupply) == 0)
-            return "Please init first.";
-        return totalSupply;
+        result = TotalSupply();
+        ZPT_Runtime_Notify(result);
+        return result;
+    }
+    
+    if (strcmp(method, "increaseTotal")==0){
+        struct Params{
+            char * address;
+            char * value;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
+        result = IncreaseTotal(p->address, p->value);
+        ZPT_Runtime_Notify(result);
+        return result;
+    }
+    
+    if (strcmp(method, "decreaseTotal")==0){
+        struct Params{
+            char * address;
+            char * value;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
+        result = DecreaseTotal(p->address, p->value);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
     
     if (strcmp(method, "balanceOf")==0){
         struct Params{
-            char * _address;
+            char * address;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        char * balance = ZPT_Storage_Get(p->_address);
-        if (arrayLen(balance) == 0)
-            return "Address is not in our database!";
-        return balance;
+        result = BalanceOf(p->address);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
     
     if (strcmp(method, "transfer")==0){
         struct Params{
-            char * _from;
-            char * _to;
-            char * _amount;
+            char * from;
+            char * to;
+            char * amount;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        if (ZPT_Runtime_CheckWitness(p->_from) == 0)
-            return "Inconsistent address.";
-        return Transfer(p->_from, p->_to, p->_amount);
+        result = Transfer(p->from, p->to, p->amount);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
     
     if (strcmp(method, "transferFrom")==0){
         struct Params{
-            char * _from;
-            char * _spender;
-            char * _to;
-            char * _amount;
+            char * from;
+            char * spender;
+            char * to;
+            char * amount;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        return TransferFrom(p->_from, p->_spender, p->_to, p->_amount);
+        result = TransferFrom(p->from, p->spender, p->to, p->amount);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
     
     if (strcmp(method, "approve")==0){
         struct Params{
-            char * _owner;
-            char * _spender;
-            char * _allowed;
+            char * owner;
+            char * spender;
+            char * allowed;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        if ((Atoi(p->_allowed)) <= 0)
-            return "The allowance can not be less than or equal to 0.";
-        char * allowedKey = concat(p->_owner, p->_spender);
-        ZPT_Storage_Put(allowedKey,p->_allowed);
-        return "Approve success.";
+        result = Approve(p->owner, p->spender, p->allowed);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
     
     if (strcmp(method, "allowance")==0){
         struct Params{
-            char * _owner;
-            char * _spender;
+            char * owner;
+            char * spender;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        char * allowedKey = concat(p->_owner, p->_spender);
-        if (arrayLen(allowedKey) == 0)
-            return "Not approved yet.";
-        return ZPT_Storage_Get(allowedKey);
+        result = Allowance(p->owner, p->spender);
+        ZPT_Runtime_Notify(result);
+        return result;
     }
     
     if(strcmp(method,"addStorage")==0){
-        
         struct Params{
-            char * a;
-            char * b;
+            char * key;
+            char * value;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        ZPT_Storage_Put(p->a,p->b);
-        char * result = ZPT_JsonMashalResult("Done","string",1);
+        ZPT_Storage_Put(p->key,p->value);
+        result = "Add success.";
         ZPT_Runtime_Notify(result);
         return result;
     }
     
-    if(strcmp(method,"getStorage")==0){
-        struct Params{
-            char * a;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        char * value = ZPT_Storage_Get(p->a);
-        char * result = ZPT_JsonMashalResult(value,"string",1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
-    
-    if(strcmp(method,"deleteStorage")==0){
-        
-        struct Params{
-            char * a;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        ZPT_Storage_Delete(p->a);
-        char * result = ZPT_JsonMashalResult("Done","string",1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
+    result = "Invalid invoke method.";
+    ZPT_Runtime_Notify(result);
+    return result;
 }
