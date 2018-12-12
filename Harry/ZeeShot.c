@@ -298,6 +298,13 @@ char *GetRental(char *TokenID)
 
 char *invoke(char *method, char *args)
 {
+  if (strcmp(method, "init") == 0)
+  {
+    char *value = Init();
+    char * result = ZPT_JsonMashalResult(value,"string",1);
+    ZPT_Runtime_Notify(result);
+    return result;
+  }
   if (strcmp(method, "totalSupply") == 0)
   {
     char *value = TotalSupply();
@@ -428,14 +435,6 @@ char *invoke(char *method, char *args)
   }
 
   if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin))==1 ){
-    if (strcmp(method, "init") == 0)
-    {
-      char *value = Init();
-      char * result = ZPT_JsonMashalResult(value,"string",1);
-      ZPT_Runtime_Notify(result);
-      return result;
-    }
-
     if (strcmp(method, "create") == 0)
     {
 
