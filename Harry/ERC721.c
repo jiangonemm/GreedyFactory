@@ -84,39 +84,6 @@ char *ZPT_Transaction_GetAttributes(char *data);
 
 int init_amount = 0;
 
-char *concat(char *a, char *b)
-{
-    int lena = arrayLen(a);
-    int lenb = arrayLen(b);
-    char *res = (char *)malloc((lena + lenb) * sizeof(char));
-    for (int i = 0; i < lena; i++)
-    {
-        res[i] = a[i];
-    }
-
-    for (int j = 0; j < lenb; j++)
-    {
-        res[lena + j] = b[j];
-    }
-    return res;
-}
-
-char *ByteArrayCompare(char *a1, char *a2)
-{
-    if (arrayLen(a1) != arrayLen(a2))
-    {
-        return false;
-    }
-    for (int i = 0; i < arrayLen(a1); i++)
-    {
-        if (a1[i] != a2[i])
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 char *Init()
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) != 0)
@@ -143,7 +110,7 @@ char *OwnerOf(char *TokenID)
 
 char *Owns(char *TokenID, char *address)
 {
-    return ByteArrayCompare(ZPT_Storage_Get(TokenID), address);
+    return  Itoa(strcmp(ZPT_Storage_Get(TokenID), address));
 }
 
 char *BalanceOf(char *address)
@@ -190,7 +157,7 @@ void Transfer(char *from, char *to, char *TokenID)
             ZPT_Storage_Put(from, Itoa(fromAmount));
 
         char *ap = "ap.";
-        char *newTokenID = concat(ap, TokenID);
+        char *newTokenID = strconcat(ap, TokenID);
         ZPT_Storage_Delete(newTokenID);
     }
 }
@@ -198,15 +165,15 @@ void Transfer(char *from, char *to, char *TokenID)
 void ApproveInternal(char *to, char *TokenID)
 {
     char *ap = "ap.";
-    char *newTokenID = concat(ap, TokenID);
+    char *newTokenID = strconcat(ap, TokenID);
     ZPT_Storage_Put(newTokenID, to);
 }
 
 char *ApprovedFor(char *address, char *TokenID)
 {
     char *ap = "ap.";
-    char *newTokenID = concat(ap, TokenID);
-    return ByteArrayCompare(ZPT_Storage_Get(newTokenID), address);
+    char *newTokenID = strconcat(ap, TokenID);
+    return  Itoa(strcmp(ZPT_Storage_Get(newTokenID), address));
 }
 
 char *Approve(char *from, char *to, char *TokenID)
@@ -250,16 +217,16 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
 char *GetHashList(char *address)
 {
     int totalSupply = Atoi(ZPT_Storage_Get("totalSupply"));
-    char *ForTrim = {"////"};
+    char *ForTrim = {"...."};
     char *Hash = {""};
     char *Result = {""};
     for (int i = 1; i <= totalSupply; i = i + 1)
     {
         Hash = ZPT_Storage_Get(Itoa(i));
-        if (Atoi(ByteArrayCompare(ZPT_Storage_Get(Hash), address)) == 1)
+        if (strcmp(ZPT_Storage_Get(Hash), address) == 1)
         {
-            Result = concat(Result, Hash);
-            Result = concat(Result, ForTrim);
+            Result = strconcat(Result, Hash);
+            Result = strconcat(Result, ForTrim);
         }
     }
     return Result;
@@ -268,7 +235,7 @@ char *GetHashList(char *address)
 char *PutRental(char *TokenID, char *address)
 {
     char *rt = "rt.";
-    char *newHash = concat(rt, TokenID);
+    char *newHash = strconcat(rt, TokenID);
     ZPT_Storage_Put(newHash, address);
     return true;
 }
@@ -276,7 +243,7 @@ char *PutRental(char *TokenID, char *address)
 char *GetRental(char *TokenID)
 {
     char *rt = "rt.";
-    char *newHash = concat(rt, TokenID);
+    char *newHash = strconcat(rt, TokenID);
     return ZPT_Storage_Get(newHash);
 }
 
