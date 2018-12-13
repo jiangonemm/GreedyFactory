@@ -264,7 +264,7 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
 char *GetHashList(char *address)
 {
   int totalSupply = Atoi(ZPT_Storage_Get("totalSupply"));
-  char *ForTrim = {"////"};
+  char *ForTrim = {"."};
   char *Hash = {""};
   char *Result = {""};
   for (int i = 1; i <= totalSupply; i = i + 1)
@@ -272,8 +272,8 @@ char *GetHashList(char *address)
     Hash = ZPT_Storage_Get(Itoa(i));
     if (Atoi(ByteArrayCompare(ZPT_Storage_Get(Hash), address)) == 1)
     {
-      Result = concat(Result, Hash);
-      Result = concat(Result, ForTrim);
+      Result = strconcat(Result, Hash);
+      Result = strconcat(Result, ForTrim);
     }
   }
   return Result;
