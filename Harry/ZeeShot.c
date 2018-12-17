@@ -88,6 +88,26 @@ char * admin = "admin";
 char * adminAddress = "ZZeme18pBEbnLyDo9RfVvT1xe3nmp6WMQW";
 char * CEOAddress = "ZZeme18pBEbnLyDo9RfVvT1xe3nmp6WMQW";
 
+<<<<<<< HEAD
+=======
+char *concat(char *a, char *b)
+{
+  int lena = arrayLen(a);
+  int lenb = arrayLen(b);
+  char *res = (char *)malloc((lena + lenb) * sizeof(char));
+  for (int i = 0; i < lena; i++)
+  {
+    res[i] = a[i];
+  }
+
+  for (int j = 0; j < lenb; j++)
+  {
+    res[lena + j] = b[j];
+  }
+  return res;
+}
+
+>>>>>>> 3a231a0e54ef15af8fc131827aa50307a594777f
 char *Init()
 {
   if (arrayLen(ZPT_Storage_Get("totalSupply")) != 0)
@@ -190,7 +210,11 @@ char *ApproverOf(char *TokenID)
 char *ApprovedFor(char *address, char *TokenID)
 {
   char *ap = "ap.";
+<<<<<<< HEAD
   char *newTokenID = strconcat(ap, TokenID);
+=======
+  char *newTokenID = concat(ap, TokenID);
+>>>>>>> 3a231a0e54ef15af8fc131827aa50307a594777f
   return Itoa(strcmp(ZPT_Storage_Get(newTokenID), address));
 }
 
