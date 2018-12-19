@@ -537,7 +537,7 @@ char *invoke(char *method, char *args)
 ```
 At this point, the analysis of the specific sample code is over. After all the writing is completed, you can click Build. After no error, you can click the Wasm on the page to download, and then you can use this file to deploy the smart contract.
 
-**I believe that you have seen through the above ERC-721 example, basically have the excellent contract code written in the c language based on wasm! **
+**I believe that you have seen through the above ERC-721 example, basically have the excellent contract code written in the c language based on wasm!**
 
 #### Precautions
 The following are the anomalies that occur when an individual is writing.
