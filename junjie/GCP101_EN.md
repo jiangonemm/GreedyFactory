@@ -1,22 +1,18 @@
-﻿# GCP-101 Smart Contract Protocol
+# GCP-101 Smart Contract Protocol
 
-标签（空格分隔）： Zeepin Token GCP101
+Zeepin Token GCP101
 
 ## Directory
----   
  - [Simple Summary](#Simple-Summary)
  - [Abstract](#Abstract)
  - [Specification](#Specification)
     * [Basic Interpretations](#Basic-Interpretations)
     * [Methods Analysis](#Methods-Analysis)
 ## Simple Summary
----
 GCP-101(Galaxy Consensus Proposal - 101) is a standard interface based on GPC-10.
 ## Abstract
----
 This standard adds authorities and several methods for a contract and allows the contract to be controlled and managed. They can be used to intialize the contract and realize the increase and decrease of the total token supply.
 ## Specification
----
 ### Basic Interpretations
 You may need two kinds of special account address to control and manage the depolyed contract.
 ```c

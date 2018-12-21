@@ -1,9 +1,8 @@
-﻿# GCP-10 Smart Contract Protocol
+# GCP-10 Smart Contract Protocol
 
-标签（空格分隔）： Zeepin Token GCP10
+Zeepin Token GCP10
 
 ## Directory
----   
  - [Simple Summary](#Simple-Summary)
  - [Abstract](#Abstract)
  - [Motivation](#Motivation)
@@ -11,16 +10,12 @@
     * [Basic Interpretations](#Basic-Interpretations)
     * [Methods Analysis](#Methods-Analysis)
 ## Simple Summary
----
 GCP-10(Galaxy Consensus Proposal - 10) is a standard interface for fungible tokens, which is similar to ERC-20 based on Ethereum.
 ## Abstract
----
 The following standard written by C language allows for the implementation of a standard API for tokens within smart contracts deployed on Zeepin Chain. This standard provides basic functionality to transfer tokens, as well as allow tokens to be approved so they can be spent by another on-chain third party. In addtion, it provides authority for CEO address and administrator address to control the deployed contract.
 ## Motivation
----
 A standard interface allows any tokens on Zeepin Chain to be re-used by other applications: from wallets to decentralized exchanges.
 ## Specification
----
 ### Basic Interpretations
 There are three vital interfaces correlated to our database.
 ```c
