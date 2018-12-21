@@ -93,7 +93,6 @@ int count(char * a){
     return cnt;
 }
 
-
 //Joint two arrays
 char * concat(char * a, char * b){
     int lena = arrayLen(a);
@@ -177,7 +176,7 @@ char * totalSupply(){
 char * increaseTotal(char * valueChar){
     if (Atoi(ZPT_Storage_Get("paused")) == 1)
         return "The contract has been paused.";
-    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(ceoAddress) == 0))
+    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(adminAddress) == 0))
         return "You have no permission to increase the totalSupply.";
     char * totalSupply = ZPT_Storage_Get("totalSupply");
     if (arrayLen(totalSupply) == 0)
@@ -193,7 +192,7 @@ char * increaseTotal(char * valueChar){
 char * decreaseTotal(char * valueChar){
     if (Atoi(ZPT_Storage_Get("paused")) == 1)
         return "The contract has been paused.";
-    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(ceoAddress) == 0))
+    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(adminAddress) == 0))
         return "You have no permission to decrease the totalSupply.";
     char * totalSupply = ZPT_Storage_Get("totalSupply");
     if (arrayLen(totalSupply) == 0)
