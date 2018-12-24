@@ -1,6 +1,6 @@
 # GCP-10 Smart Contract Protocol
 
-tag: Zeepin Token GCP10
+GCP-10 : [English](GCP10_EN.md) | [中文](GCP10_CN.md)
 
 ## Directory
  - [Simple Summary](#Simple-Summary)
