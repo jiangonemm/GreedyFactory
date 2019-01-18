@@ -169,78 +169,16 @@ char *GetType(char *TokenID)
     return ZPT_Storage_Get(newTokenID_T);
 }
 
-char *AddType(char *TokenID)
-{
-    char *T = "T.";
-    char *newTokenID_T = strconcat(T, TokenID);
-    char *type = ZPT_Storage_Get(newTokenID_T);
-    if (Atoi(type) == 0)
-    {
-        int newtype = Atoi(type) + 1;
-        ZPT_Storage_Put(newTokenID_T, Itoa(newtype));
-        return "add success";
-    }
-    else
-    {
-        return false;
-    }
-}
-
-char *SubType(char *TokenID)
-{
-    char *T = "T.";
-    char *newTokenID_T = strconcat(T, TokenID);
-    char *type = ZPT_Storage_Get(newTokenID_T);
-    if (Atoi(type) == 1)
-    {
-        int newtype = Atoi(type) - 1;
-        ZPT_Storage_Put(newTokenID_T, Itoa(newtype));
-        return "subtraction success";
-    }
-    else
-    {
-        return false;
-    }
-}
-
-char *LockTime(char *TokenID)
-{
-    if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
-    {
-        return "You need init!";
-    }
-    if (arrayLen(ZPT_Storage_Get(TokenID)) == 0)
-        return "Your TokenID is not existed";
-    char *t = "t.";
-    char *newTokenID_T = strconcat(t, TokenID);
-    ZPT_Storage_Put(newTokenID_T, I64toa(ZPT_Runtime_GetTime(), 10));
-    return "Lock time saved";
-}
-
-char *GetLockTime(char *TokenID)
-{
-    char *t = "t.";
-    char *newTokenID_T = strconcat(t, TokenID);
-    if (arrayLen(ZPT_Storage_Get(newTokenID_T)) == 0)
-    {
-        return "not exit";
-    }
-    char *lockTime = ZPT_Storage_Get(newTokenID_T);
-    return lockTime;
-}
-
 char *TokenMetadata(char *TokenID)
 {
-    char *u = "u.";
     char *l = "l.";
     char *T = "T.";
+    char *s = ".";
     char *newTokenID_T = strconcat(T, TokenID);
-    char *newTokenID_U = strconcat(u, TokenID);
     char *newTokenID_L = strconcat(l, TokenID);
     char *type = ZPT_Storage_Get(newTokenID_T);
-    char *Uniqueness = ZPT_Storage_Get(newTokenID_U);
     char *Level = ZPT_Storage_Get(newTokenID_L);
-    char *metadata = strconcat(type, Uniqueness);
+    char *metadata = strconcat(type, s);
     metadata = strconcat(metadata, Level);
     return metadata;
 }
@@ -320,7 +258,7 @@ char *GetPlanetURL(char *TokenID)
     return URL;
 }
 
-char *Create(char *TokenID, char *address, char *Uniqueness, char *planetURL)
+char *Create(char *TokenID, char *address, char *type)
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
     {
@@ -332,22 +270,16 @@ char *Create(char *TokenID, char *address, char *Uniqueness, char *planetURL)
     Transfer("", address, TokenID);
     int totalSupply = Atoi(IncreaseTotalSupply());
     IncreaseIndex(Itoa(totalSupply), TokenID);
-    char *u = "u.";
     char *l = "l.";
-    char *p = "p.";
     char *T = "T.";
     char *newTokenID_T = strconcat(T, TokenID);
-    char *newTokenID_U = strconcat(u, TokenID);
     char *newTokenID_L = strconcat(l, TokenID);
-    char *newTokenID_P = strconcat(p, TokenID);
-    ZPT_Storage_Put(newTokenID_U, Uniqueness);
     ZPT_Storage_Put(newTokenID_L, Itoa(init_amount));
-    ZPT_Storage_Put(newTokenID_P, planetURL);
     ZPT_Storage_Put(newTokenID_T, init_type);
     return true;
 }
 
-char *PlanetOnChain(char *TokenID, char *address, char *Uniqueness, char *Level, char *planetURL, char *type)
+char *PlanetOnChain(char *TokenID, char *address, char *Level,char *type)
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
     {
@@ -359,17 +291,11 @@ char *PlanetOnChain(char *TokenID, char *address, char *Uniqueness, char *Level,
     Transfer("", address, TokenID);
     int totalSupply = Atoi(IncreaseTotalSupply());
     IncreaseIndex(Itoa(totalSupply), TokenID);
-    char *u = "u.";
     char *l = "l.";
-    char *p = "p.";
     char *T = "T.";
     char *newTokenID_T = strconcat(T, TokenID);
-    char *newTokenID_U = strconcat(u, TokenID);
     char *newTokenID_L = strconcat(l, TokenID);
-    char *newTokenID_P = strconcat(p, TokenID);
-    ZPT_Storage_Put(newTokenID_U, Uniqueness);
     ZPT_Storage_Put(newTokenID_L, Level);
-    ZPT_Storage_Put(newTokenID_P, planetURL);
     ZPT_Storage_Put(newTokenID_T, type);
     return true;
 }
@@ -579,21 +505,6 @@ char *invoke(char *method, char *args)
         return result;
     }
 
-    if (strcmp(method, "getLockTime") == 0)
-    {
-
-        struct Params
-        {
-            char *TokenID;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *value = GetLockTime(p->TokenID);
-        char *result = ZPT_JsonMashalResult(value, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
-
     if (strcmp(method, "getType") == 0)
     {
 
@@ -726,7 +637,8 @@ char *invoke(char *method, char *args)
         {
             json = actionMarshal("transferFromApproval", p->approval, p->to, p->TokenID);
         }
-        else json = value;
+        else
+            json = value;
         char *result = ZPT_JsonMashalResult(json, "string", 1);
         ZPT_Runtime_Notify(result);
         return result;
@@ -742,17 +654,16 @@ char *invoke(char *method, char *args)
             {
                 char *TokenID;
                 char *Address;
-                char *Uniqueness;
-                char *planetURL;
+                char *type;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
 
-            char *value = Create(p->TokenID, p->Address, p->Uniqueness, p->planetURL);
+            char *value = Create(p->TokenID, p->Address, p->type);
             char *json;
             if (strcmp(value, "1") == 0)
             {
-                json = actionMarshal("create", p->TokenID, p->Address,"");
+                json = actionMarshal("create", p->TokenID, p->Address, "");
             }
             else
                 json = value;
@@ -795,37 +706,6 @@ char *invoke(char *method, char *args)
             return result;
         }
 
-        if (strcmp(method, "lockTime") == 0)
-        {
-
-            struct Params
-            {
-                char *TokenID;
-            };
-            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-
-            char *value = LockTime(p->TokenID);
-            char *result = ZPT_JsonMashalResult(value, "string", 1);
-            ZPT_Runtime_Notify(result);
-            return result;
-        }
-
-        if (strcmp(method, "getLockTime") == 0)
-        {
-
-            struct Params
-            {
-                char *TokenID;
-            };
-            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = GetLockTime(p->TokenID);
-            char *result = ZPT_JsonMashalResult(value, "string", 1);
-            ZPT_Runtime_Notify(result);
-            return result;
-        }
-
         if (strcmp(method, "planetOnChain") == 0)
         {
 
@@ -833,14 +713,12 @@ char *invoke(char *method, char *args)
             {
                 char *TokenID;
                 char *Address;
-                char *Uniqueness;
                 char *Level;
-                char *planetURL;
                 char *type;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = PlanetOnChain(p->TokenID, p->Address, p->Uniqueness, p->Level, p->planetURL, p->type);
+            char *value = PlanetOnChain(p->TokenID, p->Address, p->Level, p->type);
             char *json;
             if (strcmp(value, "1") == 0)
             {
@@ -853,37 +731,6 @@ char *invoke(char *method, char *args)
             return result;
         }
 
-        if (strcmp(method, "addType") == 0)
-        {
-
-            struct Params
-            {
-                char *TokenID;
-            };
-            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = AddType(p->TokenID);
-            char *result = ZPT_JsonMashalResult(value, "string", 1);
-            ZPT_Runtime_Notify(result);
-            return result;
-        }
-
-        if (strcmp(method, "subType") == 0)
-        {
-
-            struct Params
-            {
-                char *TokenID;
-            };
-            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = SubType(p->TokenID);
-            char *result = ZPT_JsonMashalResult(value, "string", 1);
-            ZPT_Runtime_Notify(result);
-            return result;
-        }
-
-        
         if (strcmp(method, "putRental") == 0)
         {
 
