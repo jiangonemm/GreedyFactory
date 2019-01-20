@@ -91,16 +91,12 @@ char *CEOAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
 
 char *mark = "\"";
 char *comma = "\,";
-char *firstbracket = "\[";
-char *lastbracket = "\]";
 
 char *actionMarshal(char *action, char *str_1, char *str_2, char *str_3)
 {
-    char *str1 = firstbracket;
+    char *str1 = action;
     char *str2;
 
-    str2 = strconcat(str1, mark);
-    str1 = strconcat(str2, action);
     str2 = strconcat(str1, mark);
     str1 = strconcat(str2, comma);
 
@@ -116,9 +112,6 @@ char *actionMarshal(char *action, char *str_1, char *str_2, char *str_3)
 
     str2 = strconcat(str1, mark);
     str1 = strconcat(str2, str_3);
-    str2 = strconcat(str1, mark);
-
-    str1 = strconcat(str2, lastbracket);
 
     return str1;
 }
@@ -127,7 +120,7 @@ char *Init()
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) != 0)
     {
-        return "init has finished!";
+        return "30001";
     }
     if (arrayLen(ZPT_Storage_Get(admin)) != 0)
         return false;
@@ -159,7 +152,7 @@ char *GetType(char *TokenID)
 char *GetMillMetadata(char *TokenID)
 {
     if (arrayLen(ZPT_Storage_Get(TokenID)) == 0)
-        return "Your TokenID is not existed";
+        return "30002";
     char *l = "l.";
     char *T = "T.";
     char *s = ".";
@@ -176,7 +169,7 @@ char *TotalSupply()
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
     {
-        return "you need init!";
+        return "30003";
     }
     return ZPT_Storage_Get("totalSupply");
 }
@@ -247,7 +240,7 @@ char *Create(char *TokenID, char *address, char *type)
     }
     char *Result = ZPT_Storage_Get(TokenID);
     if (arrayLen(Result) != 0)
-        return "Your TokenID is existed";
+        return "30004";
     Transfer("", address, TokenID);
     int totalSupply = Atoi(IncreaseTotalSupply());
     IncreaseIndex(Itoa(totalSupply), TokenID);
@@ -264,11 +257,11 @@ char *MillUpChain(char *TokenID, char *address, char *Level,char *type)
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
     {
-        return "You need `init!";
+        return "30003";
     }
     char *Result = ZPT_Storage_Get(TokenID);
     if (arrayLen(Result) != 0)
-        return "Your TokenID is existed";
+        return "30004";
     Transfer("", address, TokenID);
     int totalSupply = Atoi(IncreaseTotalSupply());
     IncreaseIndex(Itoa(totalSupply), TokenID);
@@ -294,7 +287,7 @@ char *ApproverOf(char *TokenID)
     char *newTokenID = strconcat(ap, TokenID);
     if (arrayLen(ZPT_Storage_Get(newTokenID)) == 0)
     {
-        return "import error";
+        return "31001";
     }
     return ZPT_Storage_Get(newTokenID);
 }
@@ -309,11 +302,11 @@ char *ApprovedFor(char *address, char *TokenID)
 char *Approve(char *from, char *to, char *TokenID)
 {
     if (to == "")
-        return false;
+        return "31002";
     if (Atoi(Owns(TokenID, from)) == 1)
-        return false;
+        return "31003";
     if (ZPT_Runtime_CheckWitness(from) == 0)
-        return false;
+        return "31004";
     ApproveInternal(to, TokenID);
     return true;
 }
@@ -321,11 +314,11 @@ char *Approve(char *from, char *to, char *TokenID)
 char *TransferFromOwner(char *owner, char *to, char *TokenID)
 {
     if (to == "")
-        return false;
+        return "31002";
     if (Atoi(Owns(TokenID, owner)) == 1)
-        return false;
+        return "31003";
     if (ZPT_Runtime_CheckWitness(owner) == 0)
-        return false;
+        return "31004";
     Transfer(owner, to, TokenID);
     return true;
 }
@@ -333,13 +326,13 @@ char *TransferFromOwner(char *owner, char *to, char *TokenID)
 char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
 {
     if (to == "")
-        return false;
+        return "31002";
     if (Atoi(ApprovedFor(approval, TokenID)) == 1)
-        return false;
+        return "31005";
     if (Atoi(Owns(TokenID, from)) == 1)
-        return false;
+        return "31003";
     if (ZPT_Runtime_CheckWitness(approval) == 0)
-        return false;
+        return "31004";
     Transfer(from, to, TokenID);
     return true;
 }
@@ -556,9 +549,8 @@ char *invoke(char *method, char *args)
         }
         else
             json = value;
-        char *result = ZPT_JsonMashalResult(json, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
+        ZPT_Runtime_Notify(json);
+        return json;
     }
 
     if (strcmp(method, "transferFromOwner") == 0)
@@ -580,9 +572,8 @@ char *invoke(char *method, char *args)
         }
         else
             json = value;
-        char *result = ZPT_JsonMashalResult(json, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
+        ZPT_Runtime_Notify(json);
+        return json;
     }
 
     if (strcmp(method, "transferFromApproval") == 0)
@@ -605,9 +596,8 @@ char *invoke(char *method, char *args)
         }
         else
             json = value;
-        char *result = ZPT_JsonMashalResult(json, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
+        ZPT_Runtime_Notify(json);
+        return json;
     }
 
     if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin)) == 1)
@@ -633,9 +623,8 @@ char *invoke(char *method, char *args)
             }
             else
                 json = value;
-            char *result = ZPT_JsonMashalResult(json, "string", 1);
-            ZPT_Runtime_Notify(result);
-            return result;
+            ZPT_Runtime_Notify(json);
+            return json;
         }
 
         if (strcmp(method, "upgradeMill") == 0)
@@ -675,9 +664,8 @@ char *invoke(char *method, char *args)
             }
             else
                 json = value;
-            char *result = ZPT_JsonMashalResult(json, "string", 1);
-            ZPT_Runtime_Notify(result);
-            return result;
+            ZPT_Runtime_Notify(json);
+            return json;
         }
     }
 }
