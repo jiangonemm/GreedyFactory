@@ -91,12 +91,16 @@ char *CEOAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
 
 char *mark = "\"";
 char *comma = "\,";
+char *firstbracket = "\[";
+char *lastbracket = "\]";
 
 char *actionMarshal(char *action, char *str_1, char *str_2, char *str_3)
 {
-    char *str1 = action;
+    char *str1 = firstbracket;
     char *str2;
 
+    str2 = strconcat(str1, mark);
+    str1 = strconcat(str2, action);
     str2 = strconcat(str1, mark);
     str1 = strconcat(str2, comma);
 
@@ -112,6 +116,9 @@ char *actionMarshal(char *action, char *str_1, char *str_2, char *str_3)
 
     str2 = strconcat(str1, mark);
     str1 = strconcat(str2, str_3);
+    str2 = strconcat(str1, mark);
+
+    str1 = strconcat(str2, lastbracket);
 
     return str1;
 }
@@ -258,18 +265,25 @@ void Transfer(char *from, char *to, char *TokenID)
     }
 }
 
-char *GetPlanetURL(char *TokenID)
+char *GetPlanetURL()
 {
-
-    if (arrayLen(ZPT_Storage_Get(TokenID)) == 0)
-        return "30002";
-    char *p = "p.";
-    char *newTokenID_P = strconcat(p, TokenID);
-    char *URL = ZPT_Storage_Get(newTokenID_P);
+    if (arrayLen(ZPT_Storage_Get("PlanetURL")) == 0){
+        return "31001";
+    }
+        char *URL = ZPT_Storage_Get("PlanetURL");
     return URL;
 }
 
-char *Create(char *TokenID, char *address, char *Uniqueness, char *planetURL)
+char *SetPlanetURL(char *URL)
+{
+    if (arrayLen(URL) == 0) {
+        return "31001";
+    }
+    ZPT_Storage_Put("PlanetURL", URL);
+    return "set URL success";
+}
+
+char *Create(char *TokenID, char *address, char *Uniqueness)
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
     {
@@ -283,20 +297,17 @@ char *Create(char *TokenID, char *address, char *Uniqueness, char *planetURL)
     IncreaseIndex(Itoa(totalSupply), TokenID);
     char *u = "u.";
     char *l = "l.";
-    char *p = "p.";
     char *T = "T.";
     char *newTokenID_T = strconcat(T, TokenID);
     char *newTokenID_U = strconcat(u, TokenID);
     char *newTokenID_L = strconcat(l, TokenID);
-    char *newTokenID_P = strconcat(p, TokenID);
     ZPT_Storage_Put(newTokenID_U, Uniqueness);
     ZPT_Storage_Put(newTokenID_L, Itoa(init_amount));
-    ZPT_Storage_Put(newTokenID_P, planetURL);
     ZPT_Storage_Put(newTokenID_T, init_type);
     return true;
 }
 
-char *PlanetUpChain(char *TokenID, char *address, char *Uniqueness, char *Level, char *planetURL, char *type)
+char *PlanetUpChain(char *TokenID, char *address, char *Uniqueness, char *Level,  char *type)
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
     {
@@ -310,15 +321,12 @@ char *PlanetUpChain(char *TokenID, char *address, char *Uniqueness, char *Level,
     IncreaseIndex(Itoa(totalSupply), TokenID);
     char *u = "u.";
     char *l = "l.";
-    char *p = "p.";
     char *T = "T.";
     char *newTokenID_T = strconcat(T, TokenID);
     char *newTokenID_U = strconcat(u, TokenID);
     char *newTokenID_L = strconcat(l, TokenID);
-    char *newTokenID_P = strconcat(p, TokenID);
     ZPT_Storage_Put(newTokenID_U, Uniqueness);
     ZPT_Storage_Put(newTokenID_L, Level);
-    ZPT_Storage_Put(newTokenID_P, planetURL);
     ZPT_Storage_Put(newTokenID_T, type);
     return true;
 }
@@ -515,14 +523,7 @@ char *invoke(char *method, char *args)
 
     if (strcmp(method, "getPlanetURL") == 0)
     {
-
-        struct Params
-        {
-            char *TokenID;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *value = GetPlanetURL(p->TokenID);
+        char *value = GetPlanetURL();
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
         return result;
@@ -675,12 +676,11 @@ char *invoke(char *method, char *args)
                 char *TokenID;
                 char *Address;
                 char *Uniqueness;
-                char *planetURL;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
 
-            char *value = Create(p->TokenID, p->Address, p->Uniqueness, p->planetURL);
+            char *value = Create(p->TokenID, p->Address, p->Uniqueness);
             char *json;
             if (strcmp(value, "1") == 0)
             {
@@ -718,12 +718,11 @@ char *invoke(char *method, char *args)
                 char *Address;
                 char *Uniqueness;
                 char *Level;
-                char *planetURL;
                 char *type;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = PlanetUpChain(p->TokenID, p->Address, p->Uniqueness, p->Level, p->planetURL, p->type);
+            char *value = PlanetUpChain(p->TokenID, p->Address, p->Uniqueness, p->Level, p->type);
             char *json;
             if (strcmp(value, "1") == 0)
             {
@@ -733,6 +732,20 @@ char *invoke(char *method, char *args)
                 json = value;
             ZPT_Runtime_Notify(json);
             return json;
+        }
+
+        if (strcmp(method, "setPlanetURL") == 0)
+        {
+
+            struct Params
+            {
+                char *URL;
+            };
+            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+            char *value = SetPlanetURL(p->URL);
+            char *result = ZPT_JsonMashalResult(value, "string", 1);
+            ZPT_Runtime_Notify(result);
         }
 
         if (strcmp(method, "changeType") == 0)

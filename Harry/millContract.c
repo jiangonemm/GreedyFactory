@@ -91,12 +91,16 @@ char *CEOAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
 
 char *mark = "\"";
 char *comma = "\,";
+char *firstbracket = "\[";
+char *lastbracket = "\]";
 
 char *actionMarshal(char *action, char *str_1, char *str_2, char *str_3)
 {
-    char *str1 = action;
+    char *str1 = firstbracket;
     char *str2;
 
+    str2 = strconcat(str1, mark);
+    str1 = strconcat(str2, action);
     str2 = strconcat(str1, mark);
     str1 = strconcat(str2, comma);
 
@@ -112,6 +116,9 @@ char *actionMarshal(char *action, char *str_1, char *str_2, char *str_3)
 
     str2 = strconcat(str1, mark);
     str1 = strconcat(str2, str_3);
+    str2 = strconcat(str1, mark);
+
+    str1 = strconcat(str2, lastbracket);
 
     return str1;
 }
