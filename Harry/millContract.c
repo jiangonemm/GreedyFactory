@@ -89,6 +89,9 @@ char *admin = "admin";
 char *adminAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
 char *CEOAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
 
+char *name = "Tokendiggers";
+char *symbol = "DIGGER";
+
 char *mark = "\"";
 char *comma = "\,";
 char *firstbracket = "\[";
@@ -130,8 +133,9 @@ char *Init()
         return "30001";
     }
     if (arrayLen(ZPT_Storage_Get(admin)) != 0)
-        return false;
+        return "30005";
     ZPT_Storage_Put(admin, adminAddress);
+    ZPT_Storage_Put("paused", init_type);
     ZPT_Storage_Put("totalSupply", Itoa(init_amount));
     return "init success!";
 }
@@ -151,12 +155,11 @@ char *UpgradeMill(char *TokenID, char *Level)
 
 char *GetType(char *TokenID)
 {
+    if (arrayLen(ZPT_Storage_Get(TokenID)) == 0)
+        return "31001";
     char *T = "T.";
-    char *newTokenID_T = strconcat(T, TokenID);
-    if (arrayLen(ZPT_Storage_Get(newTokenID_T)) == 0){
-        return ZPT_Storage_Get(newTokenID_T);
-    }
-    else return "31001";
+    char *newTokenID_T = strconcat(T, TokenID);  
+    return ZPT_Storage_Get(newTokenID_T);
 }
 
 char *GetMillMetadata(char *TokenID)
@@ -200,18 +203,15 @@ char *Owns(char *TokenID, char *address)
         return "30002";
     if (arrayLen(ZPT_Storage_Get(address)) == 0)
         return "31001";
-    if (strcmp(ZPT_Storage_Get(TokenID), address) == 0){
-        return true;
-    }
-    else return "31003";
+    return Itoa(strcmp(ZPT_Storage_Get(TokenID), address));
 }
 
 char *BalanceOf(char *address)
 {
-    if (arrayLen(address) == 34)
-        return ZPT_Storage_Get(address);
-    else
+    if (arrayLen(address) != 34)
         return "0";
+    else
+        return ZPT_Storage_Get(address);
 }
 
 void IncreaseIndex(char *totalSupply, char *TokenID)
@@ -271,7 +271,7 @@ char *Create(char *TokenID, char *address, char *type)
     char *newTokenID_T = strconcat(T, TokenID);
     char *newTokenID_L = strconcat(l, TokenID);
     ZPT_Storage_Put(newTokenID_L, Itoa(init_amount));
-    ZPT_Storage_Put(newTokenID_T, init_type);
+    ZPT_Storage_Put(newTokenID_T, type);
     return true;
 }
 
@@ -316,19 +316,79 @@ char *ApproverOf(char *TokenID)
 
 char *ApprovedFor(char *address, char *TokenID)
 {
+    if (arrayLen(ZPT_Storage_Get(TokenID)) == 0)
+        return "30002";
+    if (arrayLen(address) != 34)
+        return "31001";
     char *ap = "ap.";
     char *newTokenID = strconcat(ap, TokenID);
     return Itoa(strcmp(ZPT_Storage_Get(newTokenID), address));
 }
 
+char *Paused(char *address)
+{
+    if (ZPT_Runtime_CheckWitness(address) == 0)
+        return "31004";
+    if (strcmp(address, CEOAddress) != 0)
+        return "31001";
+    ZPT_Storage_Put("paused", Itoa(init_amount));
+    return "Set paused contract success!";
+}
+
+char *Unpaused(char *address)
+{
+    if (ZPT_Runtime_CheckWitness(address) == 0)
+        return "31004";
+    if (strcmp(address, CEOAddress) != 0)
+        return "31001";
+    ZPT_Storage_Put("paused", init_type);
+    return "Set Unpaused contract success!";
+}
+
+char *Freeze(char *address, char *TokenID)
+{
+    char *ma = "ma.";
+    char *newTokenID = strconcat(ma, TokenID);
+    ZPT_Storage_Put(newTokenID, address);
+}
+
+char *UnFreeze(char *address, char *TokenID)
+{
+    if (ZPT_Runtime_CheckWitness(address) == 0)
+        return "31004";
+    char *ma = "ma.";
+    char *newTokenID = strconcat(ma, TokenID);
+    if (arrayLen(ZPT_Storage_Get(newTokenID)) == 0)
+    {
+        return "31001";
+    }
+    char *ap = "ap.";
+    char *newTokenID_a = strconcat(ap, TokenID);
+    ZPT_Storage_Delete(newTokenID);
+    ZPT_Storage_Delete(newTokenID_a);
+    return "Your asset UnFreeze success!";
+}
+
 char *Approve(char *from, char *to, char *TokenID)
 {
+    char *ma = "ma.";
+    char *newTokenID = strconcat(ma, TokenID);
+    if (arrayLen(ZPT_Storage_Get(newTokenID)) != 0)
+    {
+        return "31006";
+    }
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, from)) == 1)
+    if (Atoi(Owns(TokenID, from)) != 0)
         return "31003";
     if (ZPT_Runtime_CheckWitness(from) == 0)
         return "31004";
+    if (strcmp(to, adminAddress) == 0)
+    {
+        Freeze(to, TokenID);
+        ApproveInternal(to, TokenID);
+        return true;
+    }
     ApproveInternal(to, TokenID);
     return true;
 }
@@ -337,8 +397,10 @@ char *TransferFromOwner(char *owner, char *to, char *TokenID)
 {
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, owner)) == 1)
+    if (Atoi(Owns(TokenID, owner)) != 0)
         return "31003";
+    if (Atoi(ApprovedFor(to, TokenID)) == 1)
+        return "31005";
     if (ZPT_Runtime_CheckWitness(owner) == 0)
         return "31004";
     Transfer(owner, to, TokenID);
@@ -351,7 +413,7 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
         return "31002";
     if (Atoi(ApprovedFor(approval, TokenID)) == 1)
         return "31005";
-    if (Atoi(Owns(TokenID, from)) == 1)
+    if (Atoi(Owns(TokenID, from)) != 0)
         return "31003";
     if (ZPT_Runtime_CheckWitness(approval) == 0)
         return "31004";
@@ -363,7 +425,7 @@ char *ApproveByAdmin(char *to, char *TokenID)
 {
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, adminAddress)) == 1)
+    if (Atoi(Owns(TokenID, adminAddress)) != 0)
         return "31003";
     ApproveInternal(to, TokenID);
     return true;
@@ -373,8 +435,10 @@ char *TransferFromAdmin(char *to, char *TokenID)
 {
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, adminAddress)) == 1)
+    if (Atoi(Owns(TokenID, adminAddress)) != 0)
         return "31003";
+    if (Atoi(ApprovedFor(to, TokenID)) == 1)
+        return "31005";
     Transfer(adminAddress, to, TokenID);
     return true;
 }
@@ -399,6 +463,7 @@ char *GetHashList(char *address)
 
 char *invoke(char *method, char *args)
 {
+    char *unpaused = ZPT_Storage_Get("paused");
     if (strcmp(method, "init") == 0)
     {
         char *value = Init();
@@ -406,12 +471,57 @@ char *invoke(char *method, char *args)
         ZPT_Runtime_Notify(result);
         return result;
     }
+
+    if (strcmp(method, "getName") == 0)
+    {
+        char *result = ZPT_JsonMashalResult(name, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return name;
+    }
+
+    if (strcmp(method, "getSymbol") == 0)
+    {
+        char *result = ZPT_JsonMashalResult(symbol, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return symbol;
+    }
+
+    if (strcmp(method, "paused") == 0)
+    {
+
+        struct Params
+        {
+            char *address;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = Paused(p->address);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
+    }
+
+    if (strcmp(method, "unpaused") == 0)
+    {
+
+        struct Params
+        {
+            char *address;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = Unpaused(p->address);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
+    }
+
     if (strcmp(method, "totalSupply") == 0)
     {
         char *value = TotalSupply();
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "ownerOf") == 0)
@@ -426,7 +536,7 @@ char *invoke(char *method, char *args)
         char *value = OwnerOf(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "owns") == 0)
@@ -442,7 +552,7 @@ char *invoke(char *method, char *args)
         char *value = Owns(p->TokenID, p->address);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "approverOf") == 0)
@@ -457,7 +567,7 @@ char *invoke(char *method, char *args)
         char *value = ApproverOf(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "approvedFor") == 0)
@@ -473,7 +583,7 @@ char *invoke(char *method, char *args)
         char *value = ApprovedFor(p->address, p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "balanceOf") == 0)
@@ -488,7 +598,7 @@ char *invoke(char *method, char *args)
         char *value = BalanceOf(p->address);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "getMillMetadata") == 0)
@@ -503,7 +613,21 @@ char *invoke(char *method, char *args)
         char *value = GetMillMetadata(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
+    }
+
+    if (strcmp(method, "getHashList") == 0)
+    {
+        struct Params
+        {
+            char *address;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = GetHashList(p->address);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
     }
 
     if (strcmp(method, "getType") == 0)
@@ -518,7 +642,7 @@ char *invoke(char *method, char *args)
         char *value = GetType(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "getAdmin") == 0)
@@ -526,21 +650,23 @@ char *invoke(char *method, char *args)
         return ZPT_Storage_Get(admin);
     }
 
-    if (strcmp(method, "changeAdmin") == 0)
+    if (strcmp(unpaused, init_type) == 0)
     {
-        if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin)) == 0)
-            return false;
-        struct Params
+        if (strcmp(method, "changeAdmin") == 0)
         {
-            char *address;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        ZPT_Storage_Put(admin, p->address);
-        char *result = ZPT_JsonMashalResult(p->address, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
+            if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin)) == 0)
+                return false;
+            struct Params
+            {
+                char *address;
+            };
+            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+            ZPT_Storage_Put(admin, p->address);
+            char *result = ZPT_JsonMashalResult(p->address, "string", 1);
+            ZPT_Runtime_Notify(result);
+            return result;
+        }
 
     if (strcmp(method, "setAdmin") == 0)
     {
@@ -558,20 +684,7 @@ char *invoke(char *method, char *args)
         return result;
     }
 
-    if (strcmp(method, "getHashList") == 0)
-    {
-        struct Params
-        {
-            char *address;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *value = GetHashList(p->address);
-        char *result = ZPT_JsonMashalResult(value, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
-
+    
     if (strcmp(method, "approve") == 0)
     {
 
@@ -710,6 +823,23 @@ char *invoke(char *method, char *args)
             return json;
         }
     }
+
+    if (strcmp(method, "unFreeze") == 0)
+    {
+
+        struct Params
+        {
+            char *address;
+            char *TokenID;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = UnFreeze(p->address, p->TokenID);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(value);
+        return result;
+    }
+
     if (strcmp(method, "approveByAdmin") == 0)
     {
 
@@ -752,5 +882,6 @@ char *invoke(char *method, char *args)
             json = value;
         ZPT_Runtime_Notify(json);
         return json;
+    }
     }
 }

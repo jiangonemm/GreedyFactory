@@ -89,6 +89,8 @@ char *admin = "admin";
 char *adminAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
 char *CEOAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
 
+char *name = "Planet";
+
 char *mark = "\"";
 char *comma = "\,";
 char *firstbracket = "\[";
@@ -130,8 +132,9 @@ char *Init()
         return "30001";
     }
     if (arrayLen(ZPT_Storage_Get(admin)) != 0)
-        return false;
+        return "30005";
     ZPT_Storage_Put(admin, adminAddress);
+    ZPT_Storage_Put("paused", init_type);
     ZPT_Storage_Put("totalSupply", Itoa(init_amount));
     return "init success!";
 }
@@ -152,7 +155,7 @@ char *UpgradePlanet(char *TokenID, char *Level)
 char *GetType(char *TokenID)
 {
     if (arrayLen(ZPT_Storage_Get(TokenID)) == 0)
-        return "30001";
+        return "30002";
     char *T = "T.";
     char *newTokenID_T = strconcat(T, TokenID);
     return ZPT_Storage_Get(newTokenID_T);
@@ -203,18 +206,15 @@ char *GetMetadata(char *TokenID)
 char *TotalSupply()
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
-    {
         return "30003";
-    }
     return ZPT_Storage_Get("totalSupply");
 }
 
 char *OwnerOf(char *TokenID)
 {
-    if (arrayLen(ZPT_Storage_Get(TokenID)) == 34){
-        return ZPT_Storage_Get(TokenID);
-    }
-    else return "31001";
+    if (arrayLen(ZPT_Storage_Get(TokenID)) != 34)
+        return "31001";
+    return ZPT_Storage_Get(TokenID);
 }
 
 char *Owns(char *TokenID, char *address)
@@ -223,20 +223,14 @@ char *Owns(char *TokenID, char *address)
         return "30002";
     if (arrayLen(ZPT_Storage_Get(address)) == 0)
         return "31001";
-    if (strcmp(ZPT_Storage_Get(TokenID), address) == 0)
-    {
-        return true;
-    }
-    else
-        return "31003";
+    return Itoa(strcmp(ZPT_Storage_Get(TokenID), address));
 }
 
 char *BalanceOf(char *address)
 {
-    if (arrayLen(address) == 34)
-        return ZPT_Storage_Get(address);
-    else
-        return "0";
+    if (arrayLen(address) != 34)
+        return false;
+    return ZPT_Storage_Get(address);
 }
 
 void IncreaseIndex(char *totalSupply, char *TokenID)
@@ -281,16 +275,18 @@ void Transfer(char *from, char *to, char *TokenID)
 
 char *GetPlanetURL()
 {
-    if (arrayLen(ZPT_Storage_Get("PlanetURL")) == 0){
+    if (arrayLen(ZPT_Storage_Get("PlanetURL")) == 0)
+    {
         return "31001";
     }
-        char *URL = ZPT_Storage_Get("PlanetURL");
+    char *URL = ZPT_Storage_Get("PlanetURL");
     return URL;
 }
 
 char *SetPlanetURL(char *URL)
 {
-    if (arrayLen(URL) == 0) {
+    if (arrayLen(URL) == 0)
+    {
         return "31001";
     }
     ZPT_Storage_Put("PlanetURL", URL);
@@ -321,7 +317,7 @@ char *Create(char *TokenID, char *address, char *Uniqueness)
     return true;
 }
 
-char *PutChain(char *TokenID, char *address, char *Uniqueness, char *Level,  char *type)
+char *PutChain(char *TokenID, char *address, char *Uniqueness, char *Level, char *type)
 {
     if (arrayLen(ZPT_Storage_Get("totalSupply")) == 0)
     {
@@ -365,21 +361,78 @@ char *ApproverOf(char *TokenID)
 
 char *ApprovedFor(char *address, char *TokenID)
 {
+    if (arrayLen(ZPT_Storage_Get(TokenID)) == 0)
+        return "30002";
+    if (arrayLen(address) != 34)
+        return "31001";
     char *ap = "ap.";
     char *newTokenID = strconcat(ap, TokenID);
-    if(strcmp(ZPT_Storage_Get(newTokenID), address) == 0){
-        return true;
-    }else return "31005";
+    return Itoa(strcmp(ZPT_Storage_Get(newTokenID), address));
+}
+
+char *Paused(char *address)
+{
+    if (ZPT_Runtime_CheckWitness(address) == 0)
+        return "31004";
+    if (strcmp(address, CEOAddress) != 0)
+        return "31001";
+    ZPT_Storage_Put("paused", Itoa(init_amount));
+    return "Set paused contract success!";
+}
+
+char *Unpaused(char *address)
+{
+    if (ZPT_Runtime_CheckWitness(address) == 0)
+        return "31004";
+    if (strcmp(address, CEOAddress) != 0)
+        return "31001";
+    ZPT_Storage_Put("paused", init_type);
+    return "Set Unpaused contract success!";
+}
+
+char *Freeze(char *address, char *TokenID)
+{
+    char *ma = "ma.";
+    char *newTokenID = strconcat(ma, TokenID);
+    ZPT_Storage_Put(newTokenID, address);
+}
+
+char *UnFreeze(char *address, char *TokenID)
+{
+    if (ZPT_Runtime_CheckWitness(address) == 0)
+        return "31004";
+    char *ma = "ma.";
+    char *newTokenID = strconcat(ma, TokenID);
+    if (arrayLen(ZPT_Storage_Get(newTokenID)) == 0){
+        return "31001";
+    }
+    char *ap = "ap.";
+    char *newTokenID_a = strconcat(ap, TokenID);
+    ZPT_Storage_Delete(newTokenID);
+    ZPT_Storage_Delete(newTokenID_a);
+    return "Your asset UnFreeze success!";
 }
 
 char *Approve(char *from, char *to, char *TokenID)
 {
+    char *ma = "ma.";
+    char *newTokenID = strconcat(ma, TokenID);
+    if (arrayLen(ZPT_Storage_Get(newTokenID)) != 0)
+    {
+        return "31006";
+    }
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, from)) == 1)
+    if (Atoi(Owns(TokenID, from)) != 0)
         return "31003";
     if (ZPT_Runtime_CheckWitness(from) == 0)
         return "31004";
+    if (strcmp(to, adminAddress) == 0)
+    {
+        Freeze(to, TokenID);
+        ApproveInternal(to, TokenID);
+        return true;
+    }
     ApproveInternal(to, TokenID);
     return true;
 }
@@ -388,8 +441,10 @@ char *TransferFromOwner(char *owner, char *to, char *TokenID)
 {
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, owner)) == 1)
+    if (Atoi(Owns(TokenID, owner)) != 0)
         return "31003";
+    if (Atoi(ApprovedFor(to, TokenID)) == 1)
+        return "31005";
     if (ZPT_Runtime_CheckWitness(owner) == 0)
         return "31004";
     Transfer(owner, to, TokenID);
@@ -402,7 +457,7 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
         return "31002";
     if (Atoi(ApprovedFor(approval, TokenID)) == 1)
         return "31005";
-    if (Atoi(Owns(TokenID, from)) == 1)
+    if (Atoi(Owns(TokenID, from)) != 0)
         return "31003";
     if (ZPT_Runtime_CheckWitness(approval) == 0)
         return "31004";
@@ -410,22 +465,24 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
     return true;
 }
 
-char *ApproveByAdmin( char *to, char *TokenID)
+char *ApproveByAdmin(char *to, char *TokenID)
 {
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, adminAddress)) == 1)
+    if (Atoi(Owns(TokenID, adminAddress)) != 0)
         return "31003";
     ApproveInternal(to, TokenID);
     return true;
 }
 
-char *TransferFromAdmin( char *to, char *TokenID)
+char *TransferFromAdmin(char *to, char *TokenID)
 {
     if (to == "")
         return "31002";
-    if (Atoi(Owns(TokenID, adminAddress)) == 1)
+    if (Atoi(Owns(TokenID, adminAddress)) != 0)
         return "31003";
+    if (Atoi(ApprovedFor(to, TokenID)) == 1)
+        return "31005";
     Transfer(adminAddress, to, TokenID);
     return true;
 }
@@ -450,6 +507,8 @@ char *GetHashList(char *address)
 
 char *invoke(char *method, char *args)
 {
+    char *unpaused = ZPT_Storage_Get("paused");
+
     if (strcmp(method, "init") == 0)
     {
         char *value = Init();
@@ -457,12 +516,50 @@ char *invoke(char *method, char *args)
         ZPT_Runtime_Notify(result);
         return result;
     }
+
+    if (strcmp(method, "getName") == 0)
+    {
+        char *result = ZPT_JsonMashalResult(name, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return name;
+    }
+
+    if (strcmp(method, "paused") == 0)
+    {
+
+        struct Params
+        {
+            char *address;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = Paused(p->address);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
+    }
+
+    if (strcmp(method, "unpaused") == 0)
+    {
+
+        struct Params
+        {
+            char *address;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = Unpaused(p->address);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
+    }
+
     if (strcmp(method, "totalSupply") == 0)
     {
         char *value = TotalSupply();
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "ownerOf") == 0)
@@ -477,7 +574,7 @@ char *invoke(char *method, char *args)
         char *value = OwnerOf(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "owns") == 0)
@@ -493,7 +590,7 @@ char *invoke(char *method, char *args)
         char *value = Owns(p->TokenID, p->address);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "approverOf") == 0)
@@ -508,7 +605,7 @@ char *invoke(char *method, char *args)
         char *value = ApproverOf(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "approvedFor") == 0)
@@ -524,7 +621,7 @@ char *invoke(char *method, char *args)
         char *value = ApprovedFor(p->address, p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "balanceOf") == 0)
@@ -539,7 +636,7 @@ char *invoke(char *method, char *args)
         char *value = BalanceOf(p->address);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "getMetadata") == 0)
@@ -554,7 +651,7 @@ char *invoke(char *method, char *args)
         char *value = GetMetadata(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "getPlanetURL") == 0)
@@ -562,7 +659,7 @@ char *invoke(char *method, char *args)
         char *value = GetPlanetURL();
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "getType") == 0)
@@ -577,44 +674,7 @@ char *invoke(char *method, char *args)
         char *value = GetType(p->TokenID);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
-    }
-
-    if (strcmp(method, "getAdmin") == 0)
-    {
-        return ZPT_Storage_Get(admin);
-    }
-
-    if (strcmp(method, "changeAdmin") == 0)
-    {
-        if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin)) == 0)
-            return false;
-        struct Params
-        {
-            char *address;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        ZPT_Storage_Put(admin, p->address);
-        char *result = ZPT_JsonMashalResult(p->address, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
-    }
-
-    if (strcmp(method, "setAdmin") == 0)
-    {
-        if (ZPT_Runtime_CheckWitness(CEOAddress) == 0)
-            return false;
-        struct Params
-        {
-            char *address;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        ZPT_Storage_Put(admin, p->address);
-        char *result = ZPT_JsonMashalResult(p->address, "string", 1);
-        ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
     if (strcmp(method, "getHashList") == 0)
@@ -628,138 +688,67 @@ char *invoke(char *method, char *args)
         char *value = GetHashList(p->address);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
-        return result;
+        return value;
     }
 
-    if (strcmp(method, "approve") == 0)
+    if (strcmp(method, "getAdmin") == 0)
     {
-
-        struct Params
-        {
-            char *from;
-            char *to;
-            char *TokenID;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *value = Approve(p->from, p->to, p->TokenID);
-        char *json;
-        if (strcmp(value, "1") == 0)
-        {
-            json = actionMarshal("approve", p->from, p->to, p->TokenID);
-        }
-        else
-            json = value;
-        ZPT_Runtime_Notify(json);
-        return json;
+        char *value = ZPT_Storage_Get(admin);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
     }
 
-    if (strcmp(method, "transferFromOwner") == 0)
+    if (strcmp(unpaused, init_type) == 0)
     {
-
-        struct Params
+        if (strcmp(method, "changeAdmin") == 0)
         {
-            char *from;
-            char *to;
-            char *TokenID;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *value = TransferFromOwner(p->from, p->to, p->TokenID);
-        char *json;
-        if (strcmp(value, "1") == 0)
-        {
-            json = actionMarshal("transfer", p->from, p->to, p->TokenID);
-        }
-        else
-            json = value;
-        ZPT_Runtime_Notify(json);
-        return json;
-    }
-
-    if (strcmp(method, "transferFromApproval") == 0)
-    {
-
-        struct Params
-        {
-            char *from;
-            char *to;
-            char *approval;
-            char *TokenID;
-        };
-        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-        char *value = TransferFromApproval(p->from, p->to, p->approval, p->TokenID);
-        char *json;
-        if (strcmp(value, "1") == 0)
-        {
-            json = actionMarshal("transferFromApproval", p->from, p->to, p->TokenID);
-        }
-        else
-            json = value;
-        ZPT_Runtime_Notify(json);
-        return json;
-    }
-
-    if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin)) == 1)
-    {
-
-        if (strcmp(method, "create") == 0)
-        {
-
+            if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin)) == 0)
+                return false;
             struct Params
             {
-                char *TokenID;
-                char *Address;
-                char *Uniqueness;
+                char *address;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-
-            char *value = Create(p->TokenID, p->Address, p->Uniqueness);
-            char *json;
-            if (strcmp(value, "1") == 0)
-            {
-                json = actionMarshal("create", "", p->Address ,p->TokenID);
-            }
-            else
-                json = value;
-            ZPT_Runtime_Notify(json);
-            return json;
-        }
-
-        if (strcmp(method, "upgradePlanet") == 0)
-        {
-
-            struct Params
-            {
-                char *TokenID;
-                char *Level;
-            };
-            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-
-            char *value = UpgradePlanet(p->TokenID, p->Level);
-            char *result = ZPT_JsonMashalResult(value, "string", 1);
+            ZPT_Storage_Put(admin, p->address);
+            char *result = ZPT_JsonMashalResult(p->address, "string", 1);
             ZPT_Runtime_Notify(result);
             return result;
         }
 
-        if (strcmp(method, "approveByAdmin") == 0)
+        if (strcmp(method, "setAdmin") == 0)
+        {
+            if (ZPT_Runtime_CheckWitness(CEOAddress) == 0)
+                return false;
+            struct Params
+            {
+                char *address;
+            };
+            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+            ZPT_Storage_Put(admin, p->address);
+            char *result = ZPT_JsonMashalResult(p->address, "string", 1);
+            ZPT_Runtime_Notify(result);
+            return result;
+        }
+
+        if (strcmp(method, "approve") == 0)
         {
 
             struct Params
             {
+                char *from;
                 char *to;
                 char *TokenID;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = ApproveByAdmin( p->to, p->TokenID);
+            char *value = Approve(p->from, p->to, p->TokenID);
             char *json;
             if (strcmp(value, "1") == 0)
             {
-                json = actionMarshal("approveByAdmin", adminAddress, p->to, p->TokenID);
+                json = actionMarshal("approve", p->from, p->to, p->TokenID);
             }
             else
                 json = value;
@@ -767,21 +756,22 @@ char *invoke(char *method, char *args)
             return json;
         }
 
-        if (strcmp(method, "transferFromAdmin") == 0)
+        if (strcmp(method, "transferFromOwner") == 0)
         {
 
             struct Params
             {
+                char *from;
                 char *to;
                 char *TokenID;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = TransferFromAdmin(p->to, p->TokenID);
+            char *value = TransferFromOwner(p->from, p->to, p->TokenID);
             char *json;
             if (strcmp(value, "1") == 0)
             {
-                json = actionMarshal("transferFromAdmin", adminAddress, p->to, p->TokenID);
+                json = actionMarshal("transfer", p->from, p->to, p->TokenID);
             }
             else
                 json = value;
@@ -789,24 +779,23 @@ char *invoke(char *method, char *args)
             return json;
         }
 
-        if (strcmp(method, "putChain") == 0)
+        if (strcmp(method, "transferFromApproval") == 0)
         {
 
             struct Params
             {
+                char *from;
+                char *to;
+                char *approval;
                 char *TokenID;
-                char *Address;
-                char *Uniqueness;
-                char *Level;
-                char *type;
             };
             struct Params *p = (struct Params *)malloc(sizeof(struct Params));
             ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = PutChain(p->TokenID, p->Address, p->Uniqueness, p->Level, p->type);
+            char *value = TransferFromApproval(p->from, p->to, p->approval, p->TokenID);
             char *json;
             if (strcmp(value, "1") == 0)
             {
-                json = actionMarshal("PutChain", "", p->Address, p->TokenID);
+                json = actionMarshal("transferFromApproval", p->from, p->to, p->TokenID);
             }
             else
                 json = value;
@@ -814,32 +803,164 @@ char *invoke(char *method, char *args)
             return json;
         }
 
-        if (strcmp(method, "setPlanetURL") == 0)
+        if (ZPT_Runtime_CheckWitness(ZPT_Storage_Get(admin)) == 1)
         {
 
-            struct Params
+            if (strcmp(method, "create") == 0)
             {
-                char *URL;
-            };
-            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = SetPlanetURL(p->URL);
-            char *result = ZPT_JsonMashalResult(value, "string", 1);
-            ZPT_Runtime_Notify(result);
-        }
 
-        if (strcmp(method, "changeType") == 0)
-        {
+                struct Params
+                {
+                    char *TokenID;
+                    char *Address;
+                    char *Uniqueness;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
 
-            struct Params
+                char *value = Create(p->TokenID, p->Address, p->Uniqueness);
+                char *json;
+                if (strcmp(value, "1") == 0)
+                {
+                    json = actionMarshal("create", "", p->Address, p->TokenID);
+                }
+                else
+                    json = value;
+                ZPT_Runtime_Notify(json);
+                return json;
+            }
+
+            if (strcmp(method, "upgradePlanet") == 0)
             {
-                char *TokenID;
-            };
-            struct Params *p = (struct Params *)malloc(sizeof(struct Params));
-            ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
-            char *value = ChangeType(p->TokenID);
-            char *result = ZPT_JsonMashalResult(value, "string", 1);
-            ZPT_Runtime_Notify(result);
+
+                struct Params
+                {
+                    char *TokenID;
+                    char *Level;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+
+                char *value = UpgradePlanet(p->TokenID, p->Level);
+                char *result = ZPT_JsonMashalResult(value, "string", 1);
+                ZPT_Runtime_Notify(result);
+                return result;
+            }
+
+            if (strcmp(method, "unFreeze") == 0)
+            {
+
+                struct Params
+                {
+                    char *address;
+                    char *TokenID;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+                char *value = UnFreeze(p->address, p->TokenID);
+                char *result = ZPT_JsonMashalResult(value, "string", 1);
+                ZPT_Runtime_Notify(value);
+                return result;
+            }
+
+            if (strcmp(method, "approveByAdmin") == 0)
+            {
+
+                struct Params
+                {
+                    char *to;
+                    char *TokenID;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+                char *value = ApproveByAdmin(p->to, p->TokenID);
+                char *json;
+                if (strcmp(value, "1") == 0)
+                {
+                    json = actionMarshal("approveByAdmin", adminAddress, p->to, p->TokenID);
+                }
+                else
+                    json = value;
+                ZPT_Runtime_Notify(json);
+                return json;
+            }
+
+            if (strcmp(method, "transferFromAdmin") == 0)
+            {
+
+                struct Params
+                {
+                    char *to;
+                    char *TokenID;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+                char *value = TransferFromAdmin(p->to, p->TokenID);
+                char *json;
+                if (strcmp(value, "1") == 0)
+                {
+                    json = actionMarshal("transferFromAdmin", adminAddress, p->to, p->TokenID);
+                }
+                else
+                    json = value;
+                ZPT_Runtime_Notify(json);
+                return json;
+            }
+
+            if (strcmp(method, "putChain") == 0)
+            {
+
+                struct Params
+                {
+                    char *TokenID;
+                    char *Address;
+                    char *Uniqueness;
+                    char *Level;
+                    char *type;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+                char *value = PutChain(p->TokenID, p->Address, p->Uniqueness, p->Level, p->type);
+                char *json;
+                if (strcmp(value, "1") == 0)
+                {
+                    json = actionMarshal("PutChain", "", p->Address, p->TokenID);
+                }
+                else
+                    json = value;
+                ZPT_Runtime_Notify(json);
+                return json;
+            }
+
+            if (strcmp(method, "setPlanetURL") == 0)
+            {
+
+                struct Params
+                {
+                    char *URL;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+                char *value = SetPlanetURL(p->URL);
+                char *result = ZPT_JsonMashalResult(value, "string", 1);
+                ZPT_Runtime_Notify(result);
+                return result;
+            }
+
+            if (strcmp(method, "changeType") == 0)
+            {
+
+                struct Params
+                {
+                    char *TokenID;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+                char *value = ChangeType(p->TokenID);
+                char *result = ZPT_JsonMashalResult(value, "string", 1);
+                ZPT_Runtime_Notify(result);
+                return result;
+            }
         }
     }
 }
