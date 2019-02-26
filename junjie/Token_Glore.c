@@ -490,10 +490,11 @@ char * invoke(char * method,char * args){
     if (strcmp(method, "unApprove")==0){
         struct Params{
             char * owner;
+            char * allowed;
         };
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p,sizeof(struct Params),args);
-        result = unApprove(p->owner);
+        result = unApprove(p->owner, p->allowed);
         ZPT_Runtime_Notify(result);
         return result;
     }
