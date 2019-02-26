@@ -273,12 +273,18 @@ char * approve(char * ownerAddr, char * allowedChar){
     return actionMarshal("approve",ownerAddr,"approve",allowedChar);
 }
 
-char * unApprove(char * ownerAddr){
+char * unApprove(char * ownerAddr, char * allowedChar){
     if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
         return "40002";
+    long long allowed = Atoi64(allowedChar);
+    if (allowed <= 0)
+        return "40001";
     char * frozenKey = concat(ownerAddr, "frozen");
-    char * allowedChar = ZPT_Storage_Get(frozenKey);
-    ZPT_Storage_Put(frozenKey,"0");
+    long long ownerFrozen = Atoi64(ZPT_Storage_Get(frozenKey));
+    if (ownerFrozen < allowed)
+        return "40016";
+    ownerFrozen -= allowed;
+    ZPT_Storage_Put(frozenKey,I64toa(ownerFrozen,10));
     return actionMarshal("unApprove",ownerAddr,"unapprove",allowedChar);
 }
 
