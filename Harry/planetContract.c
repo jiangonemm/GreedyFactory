@@ -84,6 +84,7 @@ char *ZPT_Transaction_GetAttributes(char *data);
 
 int init_amount = 0;
 char *init_type = "1";
+int num_limit = 200;
 
 char *admin = "admin";
 char *adminAddress = "ZK4xgvBom4D33F9YAmgg89fJW18iVss3tV";
@@ -135,8 +136,9 @@ char *Init()
         return "30005";
     ZPT_Storage_Put(admin, adminAddress);
     ZPT_Storage_Put("paused", init_type);
+    ZPT_Storage_Put("name", name);
     ZPT_Storage_Put("totalSupply", Itoa(init_amount));
-    return "init success!";
+    return "Init success!";
 }
 
 char *UpgradePlanet(char *TokenID, char *Level)
@@ -149,7 +151,7 @@ char *UpgradePlanet(char *TokenID, char *Level)
     }
     int level = Atoi(ZPT_Storage_Get(newTokenID_L)) + Atoi(Level);
     ZPT_Storage_Put(newTokenID_L, Itoa(level));
-    return "the planet level is update";
+    return "The planet level is updated";
 }
 
 char *GetType(char *TokenID)
@@ -180,6 +182,13 @@ char *ChangeType(char *TokenID)
         ZPT_Storage_Put(newTokenID_T, Itoa(newtype));
         return "change type success";
     }
+}
+
+char *ChangeName(char *Name)
+{
+    if (Name == "")
+        return "31001";
+    ZPT_Storage_Put("name", Name);
 }
 
 char *GetMetadata(char *TokenID)
@@ -302,6 +311,8 @@ char *Create(char *TokenID, char *address, char *Uniqueness)
     char *Result = ZPT_Storage_Get(TokenID);
     if (arrayLen(Result) != 0)
         return "30004";
+    if (arrayLen(address) != 34)
+        return "31001";
     Transfer("", address, TokenID);
     int totalSupply = Atoi(IncreaseTotalSupply());
     IncreaseIndex(Itoa(totalSupply), TokenID);
@@ -326,6 +337,8 @@ char *PutChain(char *TokenID, char *address, char *Uniqueness, char *Level, char
     char *Result = ZPT_Storage_Get(TokenID);
     if (arrayLen(Result) != 0)
         return "30004";
+    if (arrayLen(address) != 34)
+        return "31001";
     Transfer("", address, TokenID);
     int totalSupply = Atoi(IncreaseTotalSupply());
     IncreaseIndex(Itoa(totalSupply), TokenID);
@@ -403,7 +416,8 @@ char *UnFreeze(char *address, char *TokenID)
         return "31004";
     char *ma = "ma.";
     char *newTokenID = strconcat(ma, TokenID);
-    if (arrayLen(ZPT_Storage_Get(newTokenID)) == 0){
+    if (arrayLen(ZPT_Storage_Get(newTokenID)) == 0)
+    {
         return "31001";
     }
     char *ap = "ap.";
@@ -462,6 +476,9 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
     if (ZPT_Runtime_CheckWitness(approval) == 0)
         return "31004";
     Transfer(from, to, TokenID);
+    char *ma = "ma.";
+    char *newTokenID = strconcat(ma, TokenID);
+    ZPT_Storage_Delete(newTokenID);
     return true;
 }
 
@@ -924,7 +941,7 @@ char *invoke(char *method, char *args)
                 char *json;
                 if (strcmp(value, "1") == 0)
                 {
-                    json = actionMarshal("PutChain", "", p->Address, p->TokenID);
+                    json = actionMarshal("putChain", "", p->Address, p->TokenID);
                 }
                 else
                     json = value;
@@ -959,6 +976,22 @@ char *invoke(char *method, char *args)
                 char *value = ChangeType(p->TokenID);
                 char *result = ZPT_JsonMashalResult(value, "string", 1);
                 ZPT_Runtime_Notify(result);
+                return result;
+            }
+
+            if (strcmp(method, "changeName") == 0)
+            {
+
+                struct Params
+                {
+                    char *Name;
+                };
+                struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+                ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+
+                char *value = ChangeName(p->Name);
+                char *result = ZPT_JsonMashalResult(value, "string", 1);
+                ZPT_Runtime_Notify(value);
                 return result;
             }
         }
