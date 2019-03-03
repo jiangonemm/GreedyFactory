@@ -186,9 +186,11 @@ char *ChangeType(char *TokenID)
 
 char *ChangeName(char *Name)
 {
-    if (Name == "")
+    if (Name == ""){
         return "31001";
+    }      
     ZPT_Storage_Put("name", Name);
+    return "change name success";
 }
 
 char *GetMetadata(char *TokenID)
@@ -427,6 +429,46 @@ char *UnFreeze(char *address, char *TokenID)
     return "Your asset UnFreeze success!";
 }
 
+//设置账户为正常状态
+char *SetNormal(char *ceoaddress, char *object)
+{
+    if ((ZPT_Runtime_CheckWitness(ceoaddress) == 0))
+        return "31004";
+    if (strcmp(ceoaddress, CEOAddress) != 0)
+        return "31001";
+    char *addrStatus = strconcat(object, "status");
+    ZPT_Storage_Delete(addrStatus);
+    return "Set account normal success";
+}
+
+//设置黑名单
+char *SetBlack(char *ceoaddress, char *object)
+{
+    if ((ZPT_Runtime_CheckWitness(ceoaddress) == 0))
+        return "31004";
+    if (strcmp(ceoaddress, CEOAddress) != 0)
+        return "31001";
+    char *addrStatus = strconcat(object, "status");
+    ZPT_Storage_Put(addrStatus, init_type);
+    return "Set account black success.";
+}
+
+//判断地址存不存在黑户
+char *DetectStatus(char *from, char *to)
+{
+    char *fromStatus = strconcat(from, "status");
+    char *toStatus = strconcat(to, "status");
+    if (Atoi(ZPT_Storage_Get(fromStatus)) == 1)
+    {
+        return "31007";
+    }
+    if (Atoi(ZPT_Storage_Get(toStatus)) == 1)
+    {
+        return "31007";
+    }
+    return "0";
+}
+
 char *Approve(char *from, char *to, char *TokenID)
 {
     char *ma = "ma.";
@@ -434,6 +476,10 @@ char *Approve(char *from, char *to, char *TokenID)
     if (arrayLen(ZPT_Storage_Get(newTokenID)) != 0)
     {
         return "31006";
+    }
+    if (Atoi(DetectStatus(from, to)) != 0)
+    {
+        return "31007";
     }
     if (to == "")
         return "31002";
@@ -453,6 +499,10 @@ char *Approve(char *from, char *to, char *TokenID)
 
 char *TransferFromOwner(char *owner, char *to, char *TokenID)
 {
+    if (Atoi(DetectStatus(owner, to)) != 0)
+    {
+        return "31007";
+    }
     if (to == "")
         return "31002";
     if (Atoi(Owns(TokenID, owner)) != 0)
@@ -467,6 +517,14 @@ char *TransferFromOwner(char *owner, char *to, char *TokenID)
 
 char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
 {
+    if (Atoi(DetectStatus(from, to)) != 0)
+    {
+        return "31007";
+    }
+    if (Atoi(DetectStatus(to, approval)) != 0)
+    {
+        return "31007";
+    }
     if (to == "")
         return "31002";
     if (Atoi(ApprovedFor(approval, TokenID)) == 1)
@@ -484,6 +542,10 @@ char *TransferFromApproval(char *from, char *to, char *approval, char *TokenID)
 
 char *ApproveByAdmin(char *to, char *TokenID)
 {
+    if (Atoi(DetectStatus(adminAddress, to)) != 0)
+    {
+        return "31007";
+    }
     if (to == "")
         return "31002";
     if (Atoi(Owns(TokenID, adminAddress)) != 0)
@@ -494,6 +556,10 @@ char *ApproveByAdmin(char *to, char *TokenID)
 
 char *TransferFromAdmin(char *to, char *TokenID)
 {
+    if (Atoi(DetectStatus(adminAddress, to)) != 0)
+    {
+        return "31007";
+    }
     if (to == "")
         return "31002";
     if (Atoi(Owns(TokenID, adminAddress)) != 0)
@@ -536,6 +602,7 @@ char *invoke(char *method, char *args)
 
     if (strcmp(method, "getName") == 0)
     {
+        char * name = ZPT_Storage_Get("name");
         char *result = ZPT_JsonMashalResult(name, "string", 1);
         ZPT_Runtime_Notify(result);
         return name;
@@ -566,6 +633,38 @@ char *invoke(char *method, char *args)
         struct Params *p = (struct Params *)malloc(sizeof(struct Params));
         ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
         char *value = Unpaused(p->address);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
+    }
+
+    if (strcmp(method, "setNormal") == 0)
+    {
+
+        struct Params
+        {
+            char *ceoaddress;
+            char *object;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = SetNormal(p->ceoaddress, p->object);
+        char *result = ZPT_JsonMashalResult(value, "string", 1);
+        ZPT_Runtime_Notify(result);
+        return value;
+    }
+
+    if (strcmp(method, "setBlack") == 0)
+    {
+
+        struct Params
+        {
+            char *ceoaddress;
+            char *object;
+        };
+        struct Params *p = (struct Params *)malloc(sizeof(struct Params));
+        ZPT_JsonUnmashalInput(p, sizeof(struct Params), args);
+        char *value = SetBlack(p->ceoaddress, p->object);
         char *result = ZPT_JsonMashalResult(value, "string", 1);
         ZPT_Runtime_Notify(result);
         return value;
