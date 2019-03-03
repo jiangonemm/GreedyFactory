@@ -176,12 +176,12 @@ char * unPause(){
 char * init(char * totalSupply){
     if (arrayLen(ZPT_Storage_Get("totalSupply")) != 0)
         return "20010";
-    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
         return "20011";
-    if (Atoi(totalSupply) <= 0)
+    if (Atoi64(totalSupply) <= 0)
         return "20012";
     ZPT_Storage_Put("totalSupply", totalSupply);
-    ZPT_Storage_Put(ceoAddress, totalSupply);
+    ZPT_Storage_Put(adminAddress, totalSupply);
     ZPT_Storage_Put("paused", "0");
     return "Init success!";
 }
@@ -196,50 +196,47 @@ char * totalSupply(){
 char * increaseTotal(char * valueChar){
     if (Atoi(ZPT_Storage_Get("paused")) == 1)
         return "20000";
-    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(adminAddress) == 0))
+    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
         return "20014";
     char * totalSupply = ZPT_Storage_Get("totalSupply");
     if (arrayLen(totalSupply) == 0)
         return "20013";
-    int value = Atoi(valueChar);
+    long long value = Atoi64(valueChar);
     if (value <= 0)
         return "20015";
-    int totalSupplyNew = Atoi(totalSupply) + value;
-    int ceoBalance = Atoi(ZPT_Storage_Get(ceoAddress)) + value;
-    ZPT_Storage_Put("totalSupply", Itoa(totalSupplyNew));
-    ZPT_Storage_Put(ceoAddress, Itoa(ceoBalance));
-    return actionMarshal("increaseTotal","-",ceoAddress,valueChar);
+    long long totalSupplyNew = Atoi64(totalSupply) + value;
+    long long adminBalance = Atoi64(ZPT_Storage_Get(adminAddress)) + value;
+    ZPT_Storage_Put("totalSupply", I64toa(totalSupplyNew,10));
+    ZPT_Storage_Put(adminAddress, I64toa(adminBalance,10));
+    return actionMarshal("increaseTotal","-",adminAddress,valueChar);
 }
 
 char * decreaseTotal(char * valueChar){
     if (Atoi(ZPT_Storage_Get("paused")) == 1)
         return "20000";
-    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(adminAddress) == 0))
+    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
         return "20016";
     char * totalSupplyChar = ZPT_Storage_Get("totalSupply");
     if (arrayLen(totalSupplyChar) == 0)
         return "20013";
-    int value = Atoi(valueChar);
+    long long value = Atoi64(valueChar);
     if (value <= 0)
         return "20017";
-    int totalSupply = Atoi(totalSupplyChar);
+    long long totalSupply = Atoi64(totalSupplyChar);
     if (totalSupply <= value)
         return "20018";
-    int ceoBalance = Atoi(ZPT_Storage_Get(ceoAddress));
-    if (ceoBalance < value)
+    long long adminBalance = Atoi64(ZPT_Storage_Get(adminAddress));
+    if (adminBalance < value)
         return "20019";
-    int totalSupplyNew = totalSupply - value;
-    ceoBalance -= value;
-    ZPT_Storage_Put("totalSupply", Itoa(totalSupplyNew));
-    ZPT_Storage_Put(ceoAddress, Itoa(ceoBalance));
-    return actionMarshal("decreaseTotal", ceoAddress,"-",valueChar);
+    long long totalSupplyNew = totalSupply - value;
+    adminBalance -= value;
+    ZPT_Storage_Put("totalSupply", I64toa(totalSupplyNew,10));
+    ZPT_Storage_Put(adminAddress, I64toa(adminBalance,10));
+    return actionMarshal("decreaseTotal", adminAddress,"-",valueChar);
 }
 
 char * balanceOf(char * address){
-    char * balance = ZPT_Storage_Get(address);
-    if (arrayLen(balance) == 0)
-        return "20047";
-    return balance;
+    return ZPT_Storage_Get(address);
 }
 
 char * approve(char * ownerAddr, char * spenderAddr, char * allowedChar){
@@ -249,22 +246,18 @@ char * approve(char * ownerAddr, char * spenderAddr, char * allowedChar){
         return "20013";
     if (ZPT_Runtime_CheckWitness(ownerAddr) == 0)
         return "20040";
-    if (isStored(ownerAddr) == 0)
-        return "20051";
-    int allowed = Atoi(allowedChar);
+    long long allowed = Atoi64(allowedChar);
     if (allowed <= 0)
         return "20052";
-    int balance_owner = Atoi(ZPT_Storage_Get(ownerAddr));
+    long long balance_owner = Atoi64(ZPT_Storage_Get(ownerAddr));
     if (balance_owner < allowed)
         return "20053";
     char * allowedKey = concat(ownerAddr, spenderAddr);
-    ZPT_Storage_Put(allowedKey, Itoa(allowed));
+    ZPT_Storage_Put(allowedKey, I64toa(allowed,10));
     return actionMarshal("approve",ownerAddr,spenderAddr,allowedChar);
 }
 
 char * allowance(char * ownerAddr, char * spenderAddr){
-    if (isStored(ownerAddr) == 0)
-        return "20051";
     if (isApproved(ownerAddr, spenderAddr) == 0)
         return "20054";
     char * allowedKey = concat(ownerAddr, spenderAddr);
@@ -276,7 +269,7 @@ char * allowance(char * ownerAddr, char * spenderAddr){
 
 //设置账户为正常状态
 char * setNormal(char * address){
-    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(adminAddress) == 0))
+    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
         return "20030";
     char * addrStatus = concat(address, "status");
     ZPT_Storage_Delete(addrStatus);
@@ -285,7 +278,7 @@ char * setNormal(char * address){
 
 //设置黑名单
 char * setBlack(char * address){
-    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(adminAddress) == 0))
+    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
         return "20031";
     char * addrStatus = concat(address, "status");
     ZPT_Storage_Put(addrStatus, "1");
@@ -294,7 +287,7 @@ char * setBlack(char * address){
 
 //冻结账户
 char * setFrozen(char * address){
-    if ((ZPT_Runtime_CheckWitness(ceoAddress) == 0) && (ZPT_Runtime_CheckWitness(adminAddress) == 0))
+    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
         return "20032";
     char * addrStatus = concat(address, "status");
     ZPT_Storage_Put(addrStatus, "2");
@@ -330,7 +323,7 @@ char * messageForTransferRestriction(int restrictionCode){
         return "20034";
     if (restrictionCode == 3)
         return "20035";
-    return "Unknown account check error.";
+    return "20036";
 }
 
 //在transfer和transferFrom中添加合规检查
@@ -347,12 +340,10 @@ char * transfer(char * fromAddr, char * toAddr, char * amountChar){
         return "20013";
     if (ZPT_Runtime_CheckWitness(fromAddr) == 0)
         return "20040";
-    if (isStored(fromAddr) == 0)
-        return "20041";
-    int amount = Atoi(amountChar);
+    long long amount = Atoi64(amountChar);
     if (amount <= 0)
         return "20042";
-    int balance_from = Atoi(ZPT_Storage_Get(fromAddr));
+    long long balance_from = Atoi64(ZPT_Storage_Get(fromAddr));
     if (balance_from < amount)
         return "20043";
     
@@ -360,10 +351,10 @@ char * transfer(char * fromAddr, char * toAddr, char * amountChar){
     if (balance_from == 0)
         ZPT_Storage_Delete(fromAddr);
     else
-        ZPT_Storage_Put(fromAddr,Itoa(balance_from));
-    int balance_to = Atoi(ZPT_Storage_Get(toAddr));
+        ZPT_Storage_Put(fromAddr,I64toa(balance_from,10));
+    long long balance_to = Atoi64(ZPT_Storage_Get(toAddr));
     balance_to += amount;
-    ZPT_Storage_Put(toAddr,Itoa(balance_to));
+    ZPT_Storage_Put(toAddr,I64toa(balance_to,10));
     return actionMarshal("transfer",fromAddr,toAddr,amountChar);
 }
 
@@ -380,18 +371,16 @@ char * transferFrom(char *fromAddr, char *spenderAddr, char *toAddr, char *amoun
         return "20013";
     if (ZPT_Runtime_CheckWitness(spenderAddr) == 0)
         return "20040";
-    if (isStored(fromAddr) == 0)
-        return "20041";
     if (isApproved(fromAddr, spenderAddr) == 0)
         return "20044";
-    int amount = Atoi(amountChar);
+    long long amount = Atoi64(amountChar);
     if (amount <= 0)
         return "20045";
-    int balance_from = Atoi(ZPT_Storage_Get(fromAddr));
+    long long balance_from = Atoi64(ZPT_Storage_Get(fromAddr));
     if (balance_from < amount)
         return "20043";
     char * allowedKey = concat(fromAddr, spenderAddr);
-    int allowed = Atoi(ZPT_Storage_Get(allowedKey));
+    long long allowed = Atoi64(ZPT_Storage_Get(allowedKey));
     if (allowed < amount)
         return "20046";
     
@@ -401,18 +390,17 @@ char * transferFrom(char *fromAddr, char *spenderAddr, char *toAddr, char *amoun
         ZPT_Storage_Delete(allowedKey);
     }
     else
-        ZPT_Storage_Put(fromAddr,Itoa(balance_from));
-    int balance_to = Atoi(ZPT_Storage_Get(toAddr));
+        ZPT_Storage_Put(fromAddr,I64toa(balance_from,10));
+    long long balance_to = Atoi64(ZPT_Storage_Get(toAddr));
     balance_to += amount;
-    ZPT_Storage_Put(toAddr,Itoa(balance_to));
+    ZPT_Storage_Put(toAddr,I64toa(balance_to,10));
     allowed -= amount;
     if (allowed == 0)
         ZPT_Storage_Delete(allowedKey);
     else
-        ZPT_Storage_Put(allowedKey, Itoa(allowed));
+        ZPT_Storage_Put(allowedKey, I64toa(allowed,10));
     return actionMarshal("transferFrom",fromAddr,toAddr,amountChar);
 }
-
 
 
 char * invoke(char * method,char * args){
