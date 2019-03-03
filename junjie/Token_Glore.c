@@ -128,8 +128,9 @@ char * concat(char * a, char * b){
 }
 
 char * symbol = "Glore";
-char * adminAddress = "ZEuzshrCsE1cnvPuuRrDYgnVYNDtyt5d3X";
-char * poolAddress = "ZNEo7CMRpQXGDgSwvhm2iDGPTXhVRJcMfc";
+char * ceoAddress = "ZZfWjs62biEyjmNphFUuuHUZxTZfsa8vFA";
+char * adminAddress = "ZUcUohchJYTDfzNvnSQdrjFpVSZHVPhMXm";
+char * poolAddress = "ZRfeV4mZCHxWN5uezqxchJw5yhaxcWpQh7"; //Cashier
 
 
 char * init(char * totalSupply){
@@ -146,7 +147,7 @@ char * init(char * totalSupply){
 }
 
 char * pause(){
-    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
         return "40002";
     if (Atoi(ZPT_Storage_Get("paused")) == 1)
         return "40004";
@@ -155,7 +156,7 @@ char * pause(){
 }
 
 char * unPause(){
-    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
         return "40002";
     if (Atoi(ZPT_Storage_Get("paused")) == 0)
         return "40005";
@@ -180,7 +181,7 @@ char * increasePool(char * amountChar){
 }
 
 char * fromPoolToUser(char * toAddr, char * amountChar){
-    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(poolAddress) == 0)
         return "40002";
     char * toStatus = concat(toAddr, "status");
     if (Atoi(ZPT_Storage_Get(toStatus)) == 1)
@@ -199,7 +200,7 @@ char * fromPoolToUser(char * toAddr, char * amountChar){
 }
 
 char * setNormal(char * address){
-    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
         return "40002";
     char * addrStatus = concat(address, "status");
     ZPT_Storage_Delete(addrStatus);
@@ -207,7 +208,7 @@ char * setNormal(char * address){
 }
 
 char * setBlack(char * address){
-    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(ceoAddress) == 0)
         return "40002";
     char * addrStatus = concat(address, "status");
     ZPT_Storage_Put(addrStatus, "1");
@@ -274,7 +275,7 @@ char * approve(char * ownerAddr, char * allowedChar){
 }
 
 char * unApprove(char * ownerAddr, char * allowedChar){
-    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(poolAddress) == 0)
         return "40002";
     long long allowed = Atoi64(allowedChar);
     if (allowed <= 0)
@@ -291,7 +292,7 @@ char * unApprove(char * ownerAddr, char * allowedChar){
 char * transferFrom(char *fromAddr, char *toAddr, char *amountChar){
     if (Atoi(ZPT_Storage_Get("paused")) == 1)
         return "40004";
-    if (ZPT_Runtime_CheckWitness(adminAddress) == 0)
+    if (ZPT_Runtime_CheckWitness(poolAddress) == 0)
         return "40002";
     char * fromStatus = concat(fromAddr, "status");
     char * toStatus = concat(toAddr, "status");
