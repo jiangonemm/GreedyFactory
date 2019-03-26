@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<section>1</section>
+</body>
+<script src="../lib/browser.js"></script>
+<script>
+    // let wallet = Ont.Wallet.create('Junjie')
+    // console.log(wallet)
+
+    const keyType = Ont.Crypto.KeyType.ECDSA;
+
+    const keyParameters = new Ont.Crypto.KeyParameters(Ont.Crypto.CurveLabel.SECP256R1);
+    // console.log(keyParameters)
+
+    const privateKey = Ont.Crypto.PrivateKey.random(keyType, keyParameters)
+
+    console.log(privateKey);
+
+    // const privateKey2 = Ont.Crypto.PrivateKey.random()
+
+    // console.log(privateKey)
+
+     let account1 = Ont.Account.create(privateKey,'11','Junjie1')
+     console.log(account1)
+
+     let addressU160 = account1.address;
+     console.log(addressU160)
+
+     let address = account1.address.toBase58();
+     console.log(address);
+
+     let address2 = addressU160.toBase58();
+     console.log(address2)
+
+     
+    // let account2 = Ont.Account.create(privateKey2,"11",'Junjie2')
+
+    // console.log(account1)
+    // console.log(account2)
+
+    // wallet.addAccount(account1)
+    // wallet.addAccount(account2)
+
+    // console.log(wallet)
+
+    // let account;
+    // const encryptedPrivateKey = new Ont.Crypto.PrivateKey("kC94Opc6SjyjJAWF7WMG3gZfOy/+zRq4YACSo3SGuVFOImc8iYaw+gFWFnPHLmk9");//key is the encrypted private key
+    // let address = {value:"b11cd76841eb2932bb001e54b1570c261ab46640"}
+    // //try {
+    //     account = Ont.Account.importAccount(
+    //     "Junjie1", 
+    //     encryptedPrivateKey,
+    //     "11",
+    //     address,
+    //     "9m7RO5py90Eg3ZP2u5B43w==",
+    //     )
+    // // } catch(error) {
+    // //     console.log("error")
+    // // }
+
+    // console.log(account)
+
+
+
+
+
+
+</script>
+</html>
