@@ -20,7 +20,12 @@ Content-Disposition: form-data; name="id"
 a2pX9T8
 
 Content-Disposition: form-data; name="url"
-https://zeepin.io/feedback
+https://zeescan.io/feedback
+
+地址：http://zeescan.io/api/v1/scanLogin?id=a2pX9T8&url=https://zeescan.io/feedback
+
+
+
 
 
 --------------------------
