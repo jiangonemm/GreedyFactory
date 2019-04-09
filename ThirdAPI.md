@@ -64,21 +64,17 @@ https或者http回调地址
 
 
 Content-Disposition: form-data; name="order"
-
 T1t2PX8e
 
 Content-Disposition: form-data; name="contract"
-
 0001
 
 
 Content-Disposition: form-data; name="to"
-
 ZTMpJFXdmgosonQn5KVy3fi8YmBkztAs4Q
 
 
 Content-Disposition: form-data; name="amount"
-
 10
 
 Content-Disposition: form-data; name="url"
