@@ -85,4 +85,4 @@ Content-Disposition: form-data; name="url"
 https://zeescan.io/feedback
 
 
-实例：http://zeescan.io/api/v1/buildtx?order=T1t2PX8e&contract=0001&to=ZTMpJFXdmgosonQn5KVy3fi8YmBkztAs4Q&amount=10&url=https://zeepin.io/feedback
+实例：http://zeescan.io/api/v1/buildtx?order=T1t2PX8e&contract=0001&to=ZTMpJFXdmgosonQn5KVy3fi8YmBkztAs4Q&amount=10&url=https://zeepin.io/feedback
