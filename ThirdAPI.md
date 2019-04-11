@@ -14,6 +14,14 @@
 
 https或者http回调地址
 
+#### 给回调地址的参数 
+
+id：身份标识 
+
+address：用户地址 
+
+pubkey：用户公钥 
+
 #### 示例
 
 Content-Disposition: form-data; name="id"
@@ -59,6 +67,15 @@ https://zeescan.io/feedback
 回调地址（交易成功后，将结果发送至回调地址）
 
 https或者http回调地址
+
+
+#### 给回调地址的参数 
+
+order：订单号 
+
+state：1或0（成功/失败） 
+
+txHash：该笔订单的Hash
 
 #### 示例
 
